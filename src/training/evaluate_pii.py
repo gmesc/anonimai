@@ -12,7 +12,6 @@ Uso:
 """
 
 import argparse
-import io
 import json
 import sys
 import time
@@ -22,7 +21,10 @@ from pathlib import Path
 import torch
 from transformers import AutoModelForTokenClassification, AutoTokenizer
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 
 ROOT = Path(__file__).resolve().parents[2]
 MAX_LEN = 768

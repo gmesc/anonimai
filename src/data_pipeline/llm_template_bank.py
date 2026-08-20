@@ -27,7 +27,6 @@ Output: legal_templates.json  (lista di {"id", "doc_type", "text"})
 """
 
 import argparse
-import io
 import json
 import os
 import re
@@ -40,7 +39,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", write_through=True)
+try:
+    sys.stdout.reconfigure(encoding="utf-8", write_through=True)  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 
 # Segnaposto consentiti = quelli che gli iniettori di generate_synthetic_pii.py sanno
 # riempire. Si DERIVA da li' invece di riscriverne la lista: era una copia a mano, e

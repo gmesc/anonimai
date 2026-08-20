@@ -11,14 +11,16 @@ Uso:
   python src/training/test_pii.py "Mi chiamo Mario..."  # testa un testo tuo
 """
 
-import io
 import sys
 from pathlib import Path
 
 import torch
 from transformers import pipeline
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 
 # Modello: ULTIMA versione models/rizzo-pii-0.3B-v* (storico versioni); fallback al vecchio
 # models/rizzo-pii-0.3B non versionato, poi al legacy. Override puntuale: env PII_MODEL_DIR.

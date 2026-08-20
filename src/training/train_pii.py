@@ -9,7 +9,6 @@ Training token classification PII con mmBERT su TUTTO il dataset Ai4Privacy.
 - Salva il modello, il plot train-vs-val loss e stampa le metriche sul val subset.
 """
 
-import io
 import json
 import os
 import random
@@ -53,7 +52,10 @@ class LengthGroupedTrainer(Trainer):
             return LengthGroupedSampler(bs, dataset=ds, lengths=self._train_lengths)
         return super()._get_train_sampler(train_dataset)
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 
 # Weights & Biases: carica WANDB_API_KEY / WANDB_PROJECT dal .env (se presente).
 load_dotenv()

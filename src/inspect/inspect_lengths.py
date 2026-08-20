@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
 """Misura la lunghezza dei testi del dataset: parole (mbert_tokens) e subword (mmBERT)."""
-import io, json, sys, random
+import json, sys, random
 import numpy as np
 from transformers import AutoTokenizer
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 from pathlib import Path
 PATH = str(Path(__file__).resolve().parents[2] / "dataset" / "raw" / "ai4privacy_500k" / "data" / "train" / "train.jsonl")
 tok = AutoTokenizer.from_pretrained("jhu-clsp/mmBERT-base")

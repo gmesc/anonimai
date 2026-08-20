@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
-import json, collections, sys, io
+import json, collections, sys
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 from pathlib import Path
 BASE = str(Path(__file__).resolve().parents[2] / "dataset" / "raw" / "ai4privacy_500k" / "data")
 

@@ -19,14 +19,16 @@ Uso:  python prepare_deepmount.py
 """
 
 import ast
-import io
 import json
 import re
 import sys
 
 import pandas as pd
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 
 from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]

@@ -8,11 +8,13 @@ fine riga, sottostringhe da non toccare, e le PII fuori dal content stream
 controllo fallisce.
 """
 
-import io
 import os
 import sys
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import fitz  # PyMuPDF

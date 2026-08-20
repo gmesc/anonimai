@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
-import io, sys
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+import sys
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 import app  # carica il modello
 
 txt = ("Il sottoscritto Mario Rossi, C.F. RSSMRA85M01H501Z, residente in Via Roma 10, "

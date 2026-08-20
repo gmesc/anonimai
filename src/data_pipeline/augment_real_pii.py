@@ -19,14 +19,16 @@ Uso:
 """
 
 import argparse
-import io
 import json
 import random
 import sys
 
 import generate_synthetic_pii as g
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 random.seed(42)
 
 from pathlib import Path

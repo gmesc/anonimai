@@ -1,8 +1,11 @@
 # -*- coding: utf-8 -*-
 """Dimostra che il dataset Ai4Privacy (italiano) NON ha il tag IBAN."""
-import io, json, sys, collections
+import json, sys, collections
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 from pathlib import Path
 PATH = str(Path(__file__).resolve().parents[2] / "dataset" / "raw" / "ai4privacy_500k" / "data" / "train" / "train.jsonl")
 

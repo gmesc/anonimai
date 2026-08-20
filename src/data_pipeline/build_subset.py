@@ -25,14 +25,16 @@ Le label vengono normalizzate con la STESSA logica di train_pii.py (TAG_MAP/DROP
 cosi' i tag finali coincidono con quelli che vede il modello.
 """
 
-import io
 import json
 import os
 import random
 import sys
 from collections import Counter, defaultdict
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+try:
+    sys.stdout.reconfigure(encoding="utf-8")  # PowerShell: cp1252 di default
+except Exception:
+    pass  # stdout catturato o assente (pytest, pythonw)
 
 SEED = 1234
 random.seed(SEED)
