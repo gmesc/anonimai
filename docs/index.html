@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>rizzo-pii — Anonimizzazione PII locale e reversibile</title>
-<meta name="description" content="rizzo-pii: anonimizzazione PII locale, reversibile, per testi legali italiani. Usa i modelli frontier senza cedere i tuoi dati. 100% locale, GDPR by design." />
-<meta property="og:title" content="rizzo-pii — Local, reversible PII anonymization" />
+<title>AnonimAI — Anonimizzazione PII locale e reversibile</title>
+<meta name="description" content="AnonimAI: anonimizzazione PII locale, reversibile, per testi legali italiani. Usa i modelli frontier senza cedere i tuoi dati. 100% locale, GDPR by design." />
+<meta property="og:title" content="AnonimAI — Local, reversible PII anonymization" />
 <meta property="og:description" content="Use frontier models without giving up your data. 100% local, GDPR by design, Italian-legal coverage (CF / PIVA / catasto)." />
 <meta property="og:image" content="assets/mascot_shield.png" />
 <meta property="og:type" content="website" />
@@ -163,7 +163,7 @@
 
 <nav>
   <div class="wrap nav-in">
-    <div class="brand"><img src="assets/mascot_shield.png" alt="rizzo-pii" /> rizzo-pii</div>
+    <div class="brand"><img src="assets/mascot_shield.png" alt="AnonimAI" /> AnonimAI</div>
     <div class="nav-sp"></div>
     <div class="nav-links">
       <a href="#download"><span class="it">Download</span><span class="en">Download</span></a>
@@ -181,8 +181,8 @@
 <!-- HERO -->
 <header class="hero">
   <div class="wrap">
-    <img class="mascot" src="assets/mascot_shield.png" alt="rizzo-pii hedgehog mascot" />
-    <h1>rizzo<span class="dot">-</span>pii</h1>
+    <img class="mascot" src="assets/mascot_shield.png" alt="AnonimAI hedgehog mascot" />
+    <h1>Anonim<span class="dot">A</span>I</h1>
     <div class="tagline">
       <span class="it">Anonimizzazione PII locale e reversibile per testi legali italiani</span>
       <span class="en">Local, reversible PII anonymization for Italian legal text</span>
@@ -296,7 +296,7 @@
       <span class="it">Tre passi in locale, uno solo nel cloud. Al cloud arrivano solo segnaposto.</span>
       <span class="en">Three local steps, one remote. The cloud only ever sees placeholders.</span>
     </p>
-    <img src="assets/schema_explainable.png" alt="rizzo-pii workflow: tutto in locale su CPU, solo i segnaposto vanno al cloud" />
+    <img src="assets/schema_explainable.png" alt="AnonimAI workflow: tutto in locale su CPU, solo i segnaposto vanno al cloud" />
     <div class="steps">
       <div class="step"><div class="n">1</div><h4>🔒 <span class="it">Anonimizza</span><span class="en">Anonymize</span></h4><p><span class="it">Il modello tagga ogni PII in locale.</span><span class="en">The model tags every PII locally.</span></p></div>
       <div class="step"><div class="n">2</div><h4>🏷️ <span class="it">Segnaposto</span><span class="en">Placeholder</span></h4><p><span class="it">Ogni dato → <code>[FULLNAME_1]</code> + dizionario locale.</span><span class="en">Each value → <code>[FULLNAME_1]</code> + local dictionary.</span></p></div>
@@ -362,7 +362,7 @@
 <!-- FOOTER -->
 <footer>
   <div class="wrap">
-    <img src="assets/mascot_eu_hat.png" alt="rizzo-pii mascot" />
+    <img src="assets/mascot_eu_hat.png" alt="AnonimAI mascot" />
     <div class="flinks">
       <a href="https://github.com/Rizzo-AI-Academy/rizzo-pii" target="_blank" rel="noopener">GitHub</a>
       <a href="https://github.com/Rizzo-AI-Academy/rizzo-pii/releases/latest">Download</a>
@@ -382,7 +382,7 @@
     document.body.classList.remove('lang-it','lang-en');
     document.body.classList.add('lang-'+l);
     document.documentElement.lang=l;
-    try{localStorage.setItem('rizzo_lang',l)}catch(e){}
+    try{localStorage.setItem('anonimai_lang',l)}catch(e){}
   }
   function copyAgentPrompt(btn){
     var text=document.getElementById('agent-prompt').textContent.trim();
@@ -403,7 +403,7 @@
     }
   }
   (function(){
-    var saved;try{saved=localStorage.getItem('rizzo_lang')}catch(e){}
+    var saved;try{saved=localStorage.getItem('anonimai_lang')}catch(e){}
     var l=saved||((navigator.language||'it').toLowerCase().startsWith('it')?'it':'en');
     setLang(l);
   })();

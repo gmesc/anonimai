@@ -1,6 +1,8 @@
 # CLAUDE.md
 
-Guida per Claude Code (claude.ai/code) quando lavora in questa repo. Panoramica e struttura
+Guida per Claude Code (claude.ai/code) quando lavora in questa repo. **Prima di trasformare un
+braindump in un piano leggere [GUIDA-ARCHITETTO.md](GUIDA-ARCHITETTO.md)** (invarianti,
+vocabolario, protocollo). Panoramica e struttura
 delle cartelle in **[README.md](README.md)**. Documenti di dettaglio:
 **[docs/TASSONOMIA_TAG.md](docs/TASSONOMIA_TAG.md)** (i 22 tag),
 **[docs/DATASET.md](docs/DATASET.md)** (composizione completa di train/validation) e
@@ -71,14 +73,17 @@ modelli in `models/<versione>/`, artefatti dei run in `experiments/<run>/`, doc 
 - `server_config.py` — **configurazione host/porta** (+ `prefs.json` con tag esclusi e stato del
   dizionario) condivisa tra tutti gli entry point e con Tauri.
   Catena di precedenza: **CLI `--host`/`--port` > env `PII_HOST`/`PII_PORT` > `config.json` > default
-  `127.0.0.1:5005`**. Il config.json è in `%LOCALAPPDATA%\rizzo-pii\` (Windows) /
-  `~/.local/share/rizzo-pii/` (Linux) / `~/Library/Application Support/rizzo-pii/` (macOS), lo
+  `127.0.0.1:5005`**. Il config.json è in `%LOCALAPPDATA%\anonimai\` (Windows) /
+  `~/.local/share/anonimai/` (Linux) / `~/Library/Application Support/anonimai/` (macOS), lo
   stesso file letto/scritto da Tauri (lib.rs). Include `port_available()` (pre-bind check) e il
   codice di uscita `EXIT_PORT_CONFLICT = 76`: i 3 entry point escono con 76 se la porta è occupata
   **prima di caricare il modello** (evita secondi sprecati). Tauri riconosce il codice 76 e mostra
   il form di configurazione nello splash screen.
 - `app.py` — server Flask + **UI**: testo, PDF o file `.md`/`.txt`, chunking con overlap, offset
-  globali + dedup. Anonimizzazione **reversibile** (ogni PII → `[FULLNAME_1]`/`[IBAN_1]`… +
+  globali + dedup. I PDF passano dall'**OCR** dove serve (vedi sotto) e l'UI ha i **riquadri
+  manuali** (✏️) per oscurare firme e timbri: frazioni 0-1 della pagina mostrata, inviate come
+  `manual_boxes` a `/pdf` e `/pdf/preview`; con i riquadri il download funziona anche senza PII
+  testuali (scansione con la sola firma). Anonimizzazione **reversibile** (ogni PII → `[FULLNAME_1]`/`[IBAN_1]`… +
   dizionario locale; tab "Ripristina"). Affianca al modello una **rete regex/checksum** (EMAIL/
   TELEFONO/IBAN/CF/PIVA/carta/importo/targa/**URL**; IBAN/CF/PIVA/carta validati con checksum, che ha
   priorità sul modello). `URL` è un **23° tag solo-regex**: il modello non lo conosce; matcha schema,
@@ -95,6 +100,13 @@ modelli in `models/<versione>/`, artefatti dei run in `experiments/<run>/`, doc 
   Il render è **server-side con PyMuPDF** (`page.get_pixmap` → PNG per pagina): dentro Tauri non c'è
   un viewer PDF affidabile (WebView2/WKWebView) e l'app è offline, quindi niente pdf.js da CDN.
   Le pagine sono **pigre** (`loading=lazy`) e messe in cache: un PDF di 200 pagine non costa 200 render.
+  **Zoom (issue #92)**: ctrl/⌘+rotella (= pinch del trackpad) o i comandi `− % +` in testata;
+  lo zoom è la **larghezza** delle pagine (`--z`), non un `transform`, e vale per **entrambe** le
+  colonne — `matchScroll` specchia ora anche l'asse X. ⚠️ il fattore di scala si **misura** sugli
+  `scrollWidth/Height` prima/dopo il reflow (con `z/ZOOM` il punto sotto il puntatore scivolava:
+  padding e margini non scalano). Oltre 1,5× le pagine visibili si richiedono a **220 dpi**
+  (`?dpi=220`, lista chiusa in `pdf_export.parse_preview_dpi`), con tetto `MAX_HIRES_PAGES=8`
+  per documento.
   I documenti stanno in una **LRU in memoria** (`_DOCS`, `MAX_DOCS=6`) e **mai su disco**: valgono
   quanto il documento stesso e muoiono col processo.
   `POST /pdf/preview` fa lo stesso lavoro di `/pdf` ma lascia il binario nello store e ritorna
@@ -140,14 +152,47 @@ modelli in `models/<versione>/`, artefatti dei run in `experiments/<run>/`, doc 
   `X-PII-Residual` e `X-PII-Skipped`): (a) *residui* = valore ancora leggibile nell'output alla
   verifica finale; (b) *saltati* = valori con < 2 caratteri alfanumerici o di 2 sole cifre (es. "45"),
   non cercabili senza devastare il documento. Se in tutto il PDF non si trova **nessuna** occorrenza
-  → `422`, non un PDF "anonimizzato" che non lo è (caso tipico: scansione, serve OCR → punti 2-4
-  della issue). Nessuna dipendenza dal modello: `pdf_export.py` è testabile in isolamento.
+  e non ci sono riquadri manuali → `422`, non un PDF "anonimizzato" che non lo è. Nessuna
+  dipendenza dal modello: `pdf_export.py` è testabile in isolamento.
+- **OCR (issue #98)** — `pdf_export.page_textpage()`: per pagina, tre vie — solo testo nativo
+  (nessun OCR), scansione (`get_textpage_ocr(full=True)`), **ibrida** con carta intestata/loghi
+  come immagine su pagina normale (`full=False`, OCR delle sole immagini fuso col nativo). Usa il
+  **Tesseract compilato nella wheel di PyMuPDF**: servono solo i file **tessdata** (`PII_TESSDATA`
+  o `TESSDATA_PREFIX` o ricerca automatica; lingue `PII_OCR_LANGS`, default `ita+eng`, i cui file
+  devono esistere o l'OCR si dichiara non disponibile — `/health` espone `"ocr"`). ⚠️ la libreria
+  legge **anche l'env `TESSDATA_PREFIX`** e può vincere sul parametro `tessdata=`: l'env viene
+  riallineato alla cartella scelta in `tessdata_dir()`. La verifica dei **residui ri-OCRizza**
+  le pagine toccate (senza, su una scansione direbbe sempre "0 residui"); sulle pagine-scansione
+  redatte si scrive un **layer di testo invisibile** (`render_mode=3`, solo rotazione 0) col testo
+  OCR non-PII → l'output è ricercabile; le parole che coincidono con un valore del dizionario
+  (anche "saltato") **non** entrano nel layer. Senza tessdata: comportamento identico a prima,
+  messaggi con l'istruzione per abilitare. Docker: tessdata scaricato pinnato in build.
+- **Riquadri manuali (issue #98 punto 2)** — `redact_pdf(..., manual_boxes=...)`: rettangoli
+  `{page, x0..y1}` in frazioni 0-1 della pagina **come mostrata** (stesso spazio del PNG di
+  anteprima e di `add_redact_annot`, rotazione inclusa: nessuna matrice lato client); pixel
+  cancellati con `PDF_REDACT_IMAGE_PIXELS`, grafica vettoriale intatta. Dizionario vuoto ammesso
+  solo con riquadri. Validazione in `parse_manual_boxes` (clamp, max 500, degeneri scartati).
 - `serve.py` — entry **headless** (solo Flask, niente browser): è il backend dell'app Tauri; log su
-  `%LOCALAPPDATA%\rizzo-pii\backend.log`. Pre-check porta + `sys.exit(76)` se occupata.
+  `%LOCALAPPDATA%\anonimai\backend.log`. Pre-check porta + `sys.exit(76)` se occupata.
   `desktop_app.py` — entry PyInstaller legacy (apre il browser); stesso pre-check.
-  `assets/` — mascotte (il riccio) + icone. `smoke_app.py`, `make_test_pdf.py`.
+  `assets/` — mascotte (il riccio) + icone + **`tokens.css`** (design system StudIA, fonte di
+  verità per palette/barre/tema — la UI embedded in `app.py` lo carica per primo) +
+  **`fonts/OpenMoji-color.woff2`** (emoji self-hosted, offline). L'interfaccia si chiama
+  **AnonimAI** e segue gli standard StudIA (`~/.claude/skills/studia-app-layout`): zero
+  border-radius, tre accenti coi ruoli fissi (teal=azione, giallo=segni utente/riquadri,
+  blu=riferimento), tema chiaro/scuro via `data-theme` (localStorage `pii_theme`), colori dei
+  tag con doppia rampa chiaro/scuro in `colors()`. **Due modalità senza tab**: si apre in
+  Anonimizza, il click sul brand 🕵️ commuta su Deanonimizza (label `AnonimAI — <modalità>`
+  nella testata). Niente dropzone: **drag&drop su tutta la finestra** (solo in Anonimizza,
+  overlay flottante); l'input file resta hidden nel DOM. Icona: `assets/detective.png`
+  (OpenMoji 1F575). **Impostazioni (⚙️) a quattro schede**: Server · Come funziona · Sicurezza ·
+  Crediti (chiavi i18n `how_body`/`sec_body`/`cred_body`; il modello nei crediti arriva da
+  `/health`). I tre bottoni del risultato hanno un **popup d'uso a 900 ms** (`.htip`,
+  `transition-delay`, niente timer JS; chiavi `tip_copy`/`tip_pdf`/`tip_dict`). Niente
+  footer: i crediti e l'attribuzione OpenMoji stanno lì. Le card non hanno cornice propria
+  (unica linea: il confine fra le due colonne). `smoke_app.py`, `make_test_pdf.py`.
 
-**App desktop Tauri — `tauri/`:** finestra nativa **Rizzo PII** (WebView2) che lancia il backend
+**App desktop Tauri — `tauri/`:** finestra nativa **AnonimAI** (WebView2) che lancia il backend
 `serve.py` impacchettato come **sidecar** (`build_sidecar.spec` → `tauri/src-tauri/backend/`).
 All'avvio legge `config.json` (host/porta), passa i valori al sidecar via env `PII_HOST`/`PII_PORT`,
 attende il server sulla porta configurata e mostra l'UI. Se il sidecar esce con codice **76** (porta

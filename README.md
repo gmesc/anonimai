@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="report/images/mascot_shield.png" alt="rizzo-pii mascot — a purple hedgehog guarding a document with a shield" width="180" />
+<img src="report/images/mascot_shield.png" alt="AnonimAI mascot — a purple hedgehog guarding a document with a shield" width="180" />
 
-# rizzo-pii
+# AnonimAI
 
 ### Local, reversible PII anonymization for Italian legal text
 
@@ -53,7 +53,7 @@ out**.
 <table>
 <tr>
 <td width="120" align="center" valign="middle">
-<img src="report/images/mascot_doc.png" alt="rizzo-pii redacting a document" width="110" />
+<img src="report/images/mascot_doc.png" alt="AnonimAI redacting a document" width="110" />
 </td>
 <td valign="middle">
 
@@ -92,9 +92,9 @@ machine.
 
 ---
 
-## rizzo-pii in one picture
+## AnonimAI in one picture
 
-The workflow has three local steps and one remote step. Locally, rizzo-pii tags every span of
+The workflow has three local steps and one remote step. Locally, AnonimAI tags every span of
 personal data and replaces each one with a stable, type-aware placeholder
 (`[FULLNAME_1]`, `[IBAN_1]`, `[CF_1]`), recording the mapping `placeholder → real value` in a
 dictionary that **stays on disk**. Identical values share the same placeholder, so the frontier
@@ -103,7 +103,7 @@ ChatGPT / Claude / Gemini; when the answer comes back, a local pass swaps the pl
 true values. **The cloud provider never receives a single real name, code or number.**
 
 <div align="center">
-<img src="report/images/schema_explainable.png" alt="The rizzo-pii workflow: everything runs locally on CPU; only placeholder text crosses to the cloud, and the answer is re-identified locally" width="780" />
+<img src="report/images/schema_explainable.png" alt="The AnonimAI workflow: everything runs locally on CPU; only placeholder text crosses to the cloud, and the answer is re-identified locally" width="780" />
 </div>
 
 Everything except the frontier query happens on the user's CPU; only placeholder text crosses the
@@ -126,7 +126,7 @@ surrendering data**, built so the privacy guarantee is structural rather than a 
   third-party model pipelines supports the Act's emphasis on data governance.
 - **Accessible to everyone.** The model is ≈0.3B parameters and runs on a CPU in well under 1 GB
   of RAM — the privacy layer costs nothing extra in hardware. A normal laptop is enough.
-- **Reversible, not destructive.** Classic redaction throws information away. rizzo-pii
+- **Reversible, not destructive.** Classic redaction throws information away. AnonimAI
   **pseudonymizes**: the answer from the frontier model is reconstructed with the real values, so
   the tool is useful in real work, not just compliance theater.
 
@@ -149,7 +149,7 @@ The differentiators are **Italian-legal coverage**, a **smaller memory footprint
 that the larger generic models do not provide.
 
 > **Concrete example.** Take *"Il Sig. Mario Rossi, C.F. RSSMRA85H12F205Z, P.IVA 12345678901, è
-> titolare dell'immobile al Foglio 12, particella 345, sub. 6."* rizzo-pii tags `FULLNAME`, `CF`,
+> titolare dell'immobile al Foglio 12, particella 345, sub. 6."* AnonimAI tags `FULLNAME`, `CF`,
 > `PIVA` and `CATASTO` and rewrites it as *"Il Sig. [FULLNAME_1], C.F. [CF_1], P.IVA [PIVA_1], è
 > titolare dell'immobile al [CATASTO_1]."* A generic English-first model has no label for the
 > fiscal code, the VAT number or the cadastral reference — the three most sensitive identifiers in
@@ -159,7 +159,7 @@ that the larger generic models do not provide.
 
 ## The taxonomy: 22 tags, and why
 
-rizzo-pii predicts 22 entity types in **BIO** format (a `B-`/`I-` label per tag, plus `O`). The
+AnonimAI predicts 22 entity types in **BIO** format (a `B-`/`I-` label per tag, plus `O`). The
 raw datasets are left untouched; the mapping to these 22 tags is applied **at load time** through a
 single `TAG_MAP` in `train_pii.py`, so the taxonomy can be changed in one place without
 re-annotating anything. Details in **[docs/TASSONOMIA_TAG.md](docs/TASSONOMIA_TAG.md)**.
@@ -197,7 +197,7 @@ licence / social number → `ID_DOC`; account number → `IBAN`. Honorifics (`Do
 name of the **court** itself are dropped to `O` because they are not identifiers to mask.
 
 The five Italian-legal tags (`CF`, `PIVA`, `CATASTO`, `DOCID`, `PROVINCE`) are the reason
-rizzo-pii exists: they do not appear as labeled data in any public corpus, so they are created
+AnonimAI exists: they do not appear as labeled data in any public corpus, so they are created
 through synthesis with mathematically valid checksums.
 
 The app adds a 23rd tag, **`URL`**, handled by the regex net alone — the model is not trained on it.
@@ -292,7 +292,7 @@ overlap for long PDFs, and a colored per-tag UI.
 | Windows (installer) / Linux / macOS | PyTorch `cu128` for Blackwell |
 | Fully offline; no API key | ~745k rows, regenerable from scripts |
 
-The desktop app **Rizzo PII** (Tauri) launches the Python/Flask backend as a bundled CPU
+The desktop app **AnonimAI** (Tauri) launches the Python/Flask backend as a bundled CPU
 "sidecar"; a CPU-only PyTorch build keeps it fully **offline** on Windows (WebView2), macOS and Linux.
 Packaging instructions in **[docs/BUILD.md](docs/BUILD.md)**.
 
@@ -318,12 +318,12 @@ Nothing to install but Docker; the image carries the CPU dependencies and the mo
 git clone https://github.com/Rizzo-AI-Academy/rizzo-pii
 cd rizzo-pii
 
-docker build -t rizzo-pii .                          # ~10 min, 2.65 GB image
-docker run -d --name rizzo-pii \
-  -p 127.0.0.1:5005:5005 rizzo-pii                   # -> http://127.0.0.1:5005
+docker build -t anonimai .                          # ~10 min, 2.65 GB image
+docker run -d --name anonimai \
+  -p 127.0.0.1:5005:5005 anonimai                   # -> http://127.0.0.1:5005
 
-docker logs -f rizzo-pii                             # startup / gunicorn logs
-docker rm -f rizzo-pii                               # stop and remove
+docker logs -f anonimai                             # startup / gunicorn logs
+docker rm -f anonimai                               # stop and remove
 ```
 
 The image is **self-contained**: the CPU-only PyTorch stack and the model
@@ -343,7 +343,7 @@ Useful knobs (all optional):
 ```bash
 # a different port, tags left in the clear, irreversible anonymization
 docker run -d -p 127.0.0.1:8080:8080 -e PII_PORT=8080 \
-  -e PII_EXCLUDE_TAGS=AGE,GENDER -e PII_MAPPING=0 rizzo-pii
+  -e PII_EXCLUDE_TAGS=AGE,GENDER -e PII_MAPPING=0 anonimai
 ```
 
 > The image is **CPU-only**, which is the intended deployment (see the table above); `torch` and
@@ -607,9 +607,9 @@ either alone.
 
 ## Next step: a community-owned Italian PII dataset
 
-<img src="report/images/mascot_eu_hat.png" alt="rizzo-pii mascot wearing an EU cap, thumbs up" width="150" align="right" />
+<img src="report/images/mascot_eu_hat.png" alt="AnonimAI mascot wearing an EU cap, thumbs up" width="150" align="right" />
 
-rizzo-pii proves the thesis: you **can** keep using frontier models and still keep your data
+AnonimAI proves the thesis: you **can** keep using frontier models and still keep your data
 private, on ordinary hardware, with Italian-legal coverage no other open model offers. The single
 biggest lever on quality from here is **data** — a large, real, lawfully collected Italian corpus:
 both for the legal identifiers that are scarce today and, above all, to **balance the classes** and
@@ -702,7 +702,7 @@ respective licenses when redistributing data or weights.
 
 <div align="center">
 
-<img src="report/images/mascot_idle.png" alt="rizzo-pii mascot waving" width="130" />
+<img src="report/images/mascot_idle.png" alt="AnonimAI mascot waving" width="130" />
 
 ### Contribute to the project
 
