@@ -1,0 +1,41 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>AnonimAI</title>
+<style>
+  :root{--bg:#fbfbfa;--panel:#fff;--ink:#16181d;--muted:#5b6069;--line:#dcdcdc;--teal:#2dd4bf;
+        --teal-strong:#0f766e;--err:#b91c1c}
+  @media (prefers-color-scheme: dark){
+    :root{--bg:#0f1115;--panel:#171a21;--ink:#eceef2;--muted:#a2a8b2;--line:#3a4048;
+          --teal-strong:#5eead4;--err:#fca5a5}
+  }
+  *{box-sizing:border-box;margin:0}
+  body{height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;
+       gap:18px;background:var(--bg);color:var(--ink);text-align:center;padding:2rem;
+       font-family:"Helvetica Neue",Helvetica,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+  /* NON un glifo emoji: 🕵️ lo disegnerebbe il font di sistema (Apple su
+     macOS, Segoe su Windows) e l'icona del velo non somiglierebbe a
+     quella in topbar. Qui e' lo stesso artwork OpenMoji dell'app. */
+  .ic{width:72px;height:72px;display:block;image-rendering:auto}
+  h1{font-size:19px;font-weight:700;text-transform:uppercase;letter-spacing:.16em}
+  .bar{width:240px;height:4px;background:var(--line);overflow:hidden}
+  .bar i{display:block;width:35%;height:100%;background:var(--teal-strong);
+         animation:s 1.1s ease-in-out infinite}
+  @keyframes s{0%{margin-left:-35%}100%{margin-left:100%}}
+  #msg{font-size:12.5px;color:var(--muted);line-height:1.6;max-width:44ch}
+  #msg.err{color:var(--err);font-weight:700}
+  #msg.err + .bar,body.err .bar{display:none}
+  code{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px}
+</style>
+<img class="ic" src="../src/app/assets/detective.png" alt="">
+<h1>AnonimAI</h1>
+<p id="msg">Avvio del modello in corso… il primo avvio richiede qualche secondo.</p>
+<div class="bar"><i></i></div>
+<script>
+  // chiamata dal processo principale (executeJavaScript): niente IPC per due righe
+  window.stato = function (msg, errore) {
+    var el = document.getElementById('msg');
+    el.textContent = msg;
+    el.className = errore ? 'err' : '';
+    document.body.classList.toggle('err', !!errore);
+  };
+</script>
