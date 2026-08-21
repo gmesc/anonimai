@@ -7,9 +7,9 @@ Risoluzione con precedenza:  CLI args  >  env vars  >  config.json  >  default.
 Il file config.json e' condiviso con l'app Tauri (che lo legge/scrive dal lato Rust
 e passa host/porta al sidecar via env PII_HOST/PII_PORT):
 
-  Windows:  %LOCALAPPDATA%\\rizzo-pii\\config.json
-  Linux:    ~/.local/share/rizzo-pii/config.json
-  macOS:    ~/Library/Application Support/rizzo-pii/config.json
+  Windows:  %LOCALAPPDATA%\\anonimai\\config.json
+  Linux:    ~/.local/share/anonimai/config.json
+  macOS:    ~/Library/Application Support/anonimai/config.json
 
 Formato:  {"host": "127.0.0.1", "port": 5005}
 
@@ -35,15 +35,35 @@ DEFAULT_PORT = 5005
 EXIT_PORT_CONFLICT = 76  # riconosciuto da Tauri (lib.rs) come "porta occupata"
 
 
-def config_dir() -> Path:
-    """Directory di configurazione (platform-specific, coerente con serve.py e Tauri)."""
+def _config_base() -> Path:
     if sys.platform == "win32":
-        base = Path(os.environ.get("LOCALAPPDATA", Path.home()))
-    elif sys.platform == "darwin":
-        base = Path.home() / "Library" / "Application Support"
-    else:
-        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-    return base / "rizzo-pii"
+        return Path(os.environ.get("LOCALAPPDATA", Path.home()))
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support"
+    return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+
+
+def config_dir() -> Path:
+    """Directory di configurazione (platform-specific, coerente con serve.py e Tauri).
+
+    Migrazione una-tantum dal vecchio nome: chi aveva l'app quando si chiamava
+    rizzo-pii ha config.json/prefs.json in `rizzo-pii/` — al primo avvio col
+    nome nuovo i file si COPIANO in `anonimai/` (copia, non rename: un
+    eventuale rollback alla versione vecchia ritrova i suoi). Se la cartella
+    nuova esiste gia', la vecchia non si guarda piu'."""
+    base = _config_base()
+    new = base / "anonimai"
+    old = base / "rizzo-pii"
+    if not new.exists() and old.is_dir():
+        try:
+            new.mkdir(parents=True, exist_ok=True)
+            for fn in ("config.json", "prefs.json"):
+                src = old / fn
+                if src.is_file():
+                    (new / fn).write_bytes(src.read_bytes())
+        except OSError:
+            pass                      # senza migrazione si riparte dai default
+    return new
 
 
 def config_path() -> Path:
