@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rizzo PII</title>
+<title>AnonimAI</title>
 <style>
   html,body{height:100%;margin:0}
   body{background:#f4f6fb;color:#1c2330;
@@ -79,10 +79,10 @@
       <b>Modello locale · <span>GDPR compliant</span></b>
     </div>
 
-    <!-- mascotte + titolo + caricamento -->
+    <!-- icona + titolo + caricamento -->
     <div class="center" id="loadingBlock">
-      <img id="mascot" src="mascot.png" alt="Rizzo PII">
-      <h1>Rizzo PII</h1>
+      <img id="mascot" src="detective.png" alt="AnonimAI">
+      <h1>AnonimAI</h1>
       <div class="bar"><i></i></div>
       <p class="note">Avvio del modello in corso…<br>il primo avvio può richiedere qualche secondo.</p>
     </div>
@@ -107,16 +107,6 @@
   </div>
 
 <script>
-  // Dopo 30s di caricamento alterna la mascotte: riccio ↔ riccio col cappello UE.
-  (function(){
-    var el = document.getElementById('mascot');
-    var imgs = ['mascot.png', 'mascot_eu.png'];
-    var i = 0;
-    // pre-carica la variante col cappello per evitare flicker allo switch
-    var pre = new Image(); pre.src = imgs[1];
-    setInterval(function(){ i = (i + 1) % 2; el.src = imgs[i]; }, 30000);
-  })();
-
   // -----------------------------------------------------------------------
   // Funzioni per il form di configurazione (chiamate dal backend Rust)
   // -----------------------------------------------------------------------

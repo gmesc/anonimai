@@ -1,7 +1,7 @@
 {
   "name": "anonimizzatore-pii",
   "version": "2.0.0",
-  "description": "App desktop per l'anonimizzazione PII in locale (rizzo-pii)",
+  "description": "AnonimAI — app desktop per l'anonimizzazione PII in locale",
   "private": true,
   "scripts": {
     "tauri": "tauri"

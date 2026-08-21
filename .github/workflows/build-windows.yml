@@ -1,7 +1,7 @@
 # Compila l'app desktop Windows (sidecar PyInstaller + bundle Tauri NSIS) e allega
 # l'installer alla release del tag.
 #
-#   git tag -a v2.0.1 -m "Rizzo PII 2.0.1" && git push origin v2.0.1
+#   git tag -a v2.0.1 -m "AnonimAI 2.0.1" && git push origin v2.0.1
 #
 # Serve un runner Windows: PyInstaller non cross-compila e il sidecar e' Python+torch,
 # quindi da macOS/Linux (Docker compreso) l'.exe non si puo' produrre.
@@ -98,8 +98,8 @@ jobs:
           npm install
           npx tauri build
 
-      # Tauri lo chiama "Rizzo PII_2.0.0_x64-setup.exe": si rinomina nella convenzione degli
-      # altri artefatti della release (Rizzo-PII-2.0.0-macOS-arm64.dmg, ...-Linux-x86_64.AppImage),
+      # Tauri lo chiama "AnonimAI_2.0.0_x64-setup.exe": si rinomina nella convenzione degli
+      # altri artefatti della release (AnonimAI-2.0.0-macOS-arm64.dmg, ...-Linux-x86_64.AppImage),
       # a cui puntano i link della landing in docs/index.html. Gli spazi andrebbero comunque
       # percent-encoded nell'URL di upload.
       - name: Individua l'installer
@@ -109,7 +109,7 @@ jobs:
                  Select-Object -First 1
           if (-not $exe) { throw "installer NSIS non trovato" }
           $ver = (Get-Content tauri/src-tauri/tauri.conf.json | ConvertFrom-Json).version
-          $dest = Join-Path $exe.DirectoryName "Rizzo-PII-$ver-Windows-Setup.exe"
+          $dest = Join-Path $exe.DirectoryName "AnonimAI-$ver-Windows-Setup.exe"
           if ($exe.FullName -ne $dest) { Move-Item -Force $exe.FullName $dest }
           $size = [math]::Round((Get-Item $dest).Length / 1GB, 2)
           Write-Host "installer: $dest ($size GB)"

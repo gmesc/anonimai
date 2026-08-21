@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Build dell'app desktop Rizzo PII per macOS (.app + .dmg), CPU/offline.
+# Build dell'app desktop AnonimAI per macOS (.app + .dmg), CPU/offline.
 #
 # Speculare a build_linux.sh: stesso build_sidecar.spec, sidecar 'pii-backend'
 # senza estensione (il Rust in lib.rs sceglie il nome col cfg!(windows)), e
@@ -18,7 +18,7 @@
 #
 # NOTA firma: il bundle non e' firmato ne' notarizzato. In locale si apre
 # senza problemi (niente quarantena); se lo copi su un'altra macchina serve
-# "tasto destro > Apri" oppure:  xattr -dr com.apple.quarantine "Rizzo PII.app"
+# "tasto destro > Apri" oppure:  xattr -dr com.apple.quarantine "AnonimAI.app"
 # ============================================================================
 set -euo pipefail
 
@@ -94,5 +94,5 @@ npx tauri build --bundles $BUNDLES
 
 echo
 echo "FATTO. Artefatti macOS in:"
-echo "  tauri/src-tauri/target/release/bundle/macos/Rizzo PII.app"
+echo "  tauri/src-tauri/target/release/bundle/macos/AnonimAI.app"
 echo "  tauri/src-tauri/target/release/bundle/dmg/*.dmg"

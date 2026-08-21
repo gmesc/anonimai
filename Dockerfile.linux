@@ -1,11 +1,11 @@
 # ============================================================================
-# Ambiente di build RIPRODUCIBILE per i bundle Linux (.deb/.AppImage) di Rizzo PII.
+# Ambiente di build RIPRODUCIBILE per i bundle Linux (.deb/.AppImage) di AnonimAI.
 # L'immagine contiene SOLO la toolchain (apt + Rust + Node + venv CPU con torch/
 # transformers/pyinstaller). Sorgenti e modello NON sono nell'immagine: si montano
 # a runtime (-v), così l'immagine resta riutilizzabile e l'output finisce sull'host.
 #
-#   docker build -t rizzo-pii-builder -f Dockerfile.linux .
-#   docker run --rm -e VENV=/opt/venv -v "$PWD":/work -w /work rizzo-pii-builder
+#   docker build -t anonimai-builder -f Dockerfile.linux .
+#   docker run --rm -e VENV=/opt/venv -v "$PWD":/work -w /work anonimai-builder
 #   # artefatti -> tauri/src-tauri/target/release/bundle/{deb,appimage}/
 # ============================================================================
 FROM ubuntu:22.04
