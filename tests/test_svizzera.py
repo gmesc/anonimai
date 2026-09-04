@@ -6,7 +6,8 @@ EAN-13), Cantone -> PROVINCE, NAP -> ZIPCODE, targa TI 123456 -> TARGA. I
 Termini personali sono la lista {value, tag} salvata in prefs.json: match
 letterale case-insensitive con confini di parola, priorita' massima in fusione.
 
-Tutto senza modello: si importano solo detectors.py e server_config.py.
+Tutto il codice del fork vive in detectors_local.py (upstream non lo ha):
+install() appende i detector CH a detectors.DETECTORS. Senza modello.
 """
 
 import sys
@@ -17,7 +18,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src" / "app"))
 
 import detectors as dt  # noqa: E402
-import server_config as sc  # noqa: E402
+import detectors_local as dl  # noqa: E402
+
+dl.install()
 
 
 def labels(text):
@@ -27,11 +30,11 @@ def labels(text):
 class TestAvs(unittest.TestCase):
 
     def test_checksum(self):
-        self.assertTrue(dt.avs_ok("756.1234.5678.97"))       # esempio della legenda
-        self.assertTrue(dt.avs_ok("7561234567897"))
-        self.assertFalse(dt.avs_ok("756.1234.5678.90"))      # cifra di controllo errata
-        self.assertFalse(dt.avs_ok("755.1234.5678.97"))      # non inizia per 756
-        self.assertFalse(dt.avs_ok("756.1234.5678"))         # troppo corto
+        self.assertTrue(dl.avs_ok("756.1234.5678.97"))       # esempio della legenda
+        self.assertTrue(dl.avs_ok("7561234567897"))
+        self.assertFalse(dl.avs_ok("756.1234.5678.90"))      # cifra di controllo errata
+        self.assertFalse(dl.avs_ok("755.1234.5678.97"))      # non inizia per 756
+        self.assertFalse(dl.avs_ok("756.1234.5678"))         # troppo corto
 
     def test_detected_as_id_doc(self):
         found = labels("Numero AVS: 756.1234.5678.97 del paziente.")
@@ -98,17 +101,17 @@ class TestTerminiPersonali(unittest.TestCase):
              {"value": "Progetto Aurora", "tag": "PROGETTO"}]
 
     def test_match_case_insensitive_confini(self):
-        ents = dt.match_custom_terms(
+        ents = dl.match_custom_terms(
             "L'ISTITUTO ELVETICO di Lugano segue il progetto aurora.", self.TERMS)
         got = {(e["label"], e["source"]) for e in ents}
         self.assertEqual(got, {("ORG", "utente"), ("PROGETTO", "utente")})
 
     def test_niente_match_dentro_parola(self):
-        ents = dt.match_custom_terms("il Superistituto Elvetico", self.TERMS)
+        ents = dl.match_custom_terms("il Superistituto Elvetico", self.TERMS)
         self.assertEqual(ents, [])
 
     def test_spazi_flessibili(self):
-        ents = dt.match_custom_terms("Istituto\n  Elvetico", self.TERMS)
+        ents = dl.match_custom_terms("Istituto\n  Elvetico", self.TERMS)
         self.assertEqual(len(ents), 1)
 
     def test_parse_scarta_corti_e_tag_invalidi(self):
@@ -117,12 +120,12 @@ class TestTerminiPersonali(unittest.TestCase):
                {"value": "valido", "tag": "un tag no"},    # tag fuori grammatica
                {"value": "ok termine", "tag": "ORG"},      # duplicato (case-insensitive)
                "spazzatura"]
-        out = sc.parse_custom_terms(raw)
+        out = dl.parse_custom_terms(raw)
         self.assertEqual(out, [{"value": "ok termine", "tag": "ORG"}])
 
     def test_parse_tetto(self):
         raw = [{"value": f"termine numero {i}", "tag": "ORG"} for i in range(300)]
-        self.assertEqual(len(sc.parse_custom_terms(raw)), sc.CUSTOM_TERMS_MAX)
+        self.assertEqual(len(dl.parse_custom_terms(raw)), dl.CUSTOM_TERMS_MAX)
 
 
 if __name__ == "__main__":

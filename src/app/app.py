@@ -65,9 +65,14 @@ import pdf_export
 import server_config
 # Rete REGEX + CHECKSUM: modulo a parte, senza dipendenze dal modello. I nomi
 # restano importabili da qui (`app.detect_regex`) per non rompere chi li usa.
-from detectors import (DETECTORS, SOFT_REGEX_LABELS, avs_ok, cf_ok,  # noqa: F401
-                       detect_iban, detect_regex, iban_ok, luhn_ok,
-                       match_custom_terms, piva_ok)
+from detectors import (DETECTORS, SOFT_REGEX_LABELS, cf_ok,  # noqa: F401
+                       detect_iban, detect_regex, iban_ok, luhn_ok, piva_ok)
+# --- fork gmesc/anonimai: estensioni locali (Svizzera + Termini personali) ---
+# Tutto il codice del fork vive in detectors_local.py (file che upstream non
+# ha): qui restano solo gli agganci a singola riga, per ridurre i conflitti
+# nei merge/cherry-pick da upstream.
+import detectors_local
+detectors_local.install()          # detector CH dentro detectors.DETECTORS
 from transformers import pipeline
 
 
@@ -237,24 +242,22 @@ TAGS = [
     ("TIME", "Ora", "Time of day", "ore 15:30"),
     ("STREET", "Via / piazza / corso", "Street / square", "Via Garibaldi"),
     ("BUILDINGNUM", "Numero civico", "Building number", "24"),
-    ("ZIPCODE", "CAP / NAP svizzero", "ZIP / Swiss postal code (NAP)", "00185 · CH-6600"),
+    ("ZIPCODE", "CAP", "ZIP / postal code", "00185"),
     ("CITY", "Città", "City", "Milano"),
-    ("PROVINCE", "Provincia / Cantone svizzero", "Province / Swiss canton", "MI · Canton Ticino"),
+    ("PROVINCE", "Sigla della provincia", "Province code", "MI"),
     ("EMAIL", "Email, PEC inclusa", "Email, certified mail included", "m.rossi@studio.it"),
     ("TELEPHONENUM", "Numero di telefono", "Phone number", "+39 333 1234567"),
     ("CF", "Codice fiscale (checksum verificato)", "Italian tax code (checksum verified)",
      "RSSMRA85H12F205Z"),
     ("PIVA", "Partita IVA (checksum verificato)", "VAT number (checksum verified)", "12345678901"),
-    ("ID_DOC", "Numero di documento d'identità (carta, passaporto, patente, n. AVS)",
-     "Identity document number (ID card, passport, driving licence, Swiss AVS number)",
-     "CA12345AB · 756.1234.5678.97"),
+    ("ID_DOC", "Numero di documento d'identità (carta, passaporto, patente)",
+     "Identity document number (ID card, passport, driving licence)", "CA12345AB"),
     ("IBAN", "IBAN / numero di conto (checksum verificato)",
      "IBAN / account number (checksum verified)", "IT60X0542811101000000123456"),
     ("CREDITCARDNUMBER", "Numero di carta di credito (Luhn verificato)",
      "Credit card number (Luhn verified)", "4111 1111 1111 1111"),
     ("AMOUNT", "Importo in denaro", "Money amount", "€ 12.500,00"),
-    ("TARGA", "Targa di veicolo (anche svizzera)", "Vehicle plate (Swiss included)",
-     "AB 123 CD · TI 123456"),
+    ("TARGA", "Targa di veicolo", "Vehicle plate", "AB 123 CD"),
     ("ORG", "Ragione sociale privata: società, studio legale, banca",
      "Private organization: company, law firm, bank", "Edilnord S.r.l."),
     ("DOCID", "Codice di un atto: ruolo generale, protocollo, repertorio, sentenza",
@@ -264,6 +267,7 @@ TAGS = [
     ("URL", "Indirizzo web (rilevato solo dalla rete regex, non dal modello)",
      "Web address (regex net only, not from the model)", "https://www.studiorossi.it"),
 ]
+TAGS = detectors_local.swissify_tags(TAGS)   # fork: doppio identificativo IT<->CH
 TAG_NAMES = [t[0] for t in TAGS]
 
 # Preferenze di default del server (env > prefs.json). Gli argomenti CLI le sovrascrivono
@@ -276,9 +280,7 @@ TAG_NAMES = [t[0] for t in TAGS]
 _prefs = server_config.load_prefs()
 EXCLUDED_TAGS = _prefs["excluded_tags"]
 MAPPING_ENABLED = _prefs["mapping_enabled"]
-# Termini personali: valori letterali che l'utente vuole SEMPRE rilevati, col
-# loro tag (anche una label nuova: il placeholder e i colori sono per-label).
-CUSTOM_TERMS = _prefs["custom_terms"]
+CUSTOM_TERMS = detectors_local.load_custom_terms()   # fork: Termini personali
 
 
 # --------------------------------------------------------------------------- #
@@ -407,7 +409,8 @@ def analyze(text, excluded=None, mapping_enabled=True):
     soggetto, ma da sola non fa risalire al valore."""
     excluded = set(excluded or ())
     model_ents, n_chunks = detect_model(text)
-    cands = model_ents + detect_regex(text) + match_custom_terms(text, CUSTOM_TERMS)
+    cands = model_ents + detect_regex(text) \
+        + detectors_local.match_custom_terms(text, CUSTOM_TERMS)  # fork
     if excluded:
         cands = [e for e in cands if e["label"] not in excluded]
     kept = _merge(cands, text)
@@ -816,9 +819,9 @@ def settings_post():
     tags = None
     if "excluded_tags" in data:
         tags = server_config.parse_tag_list(data["excluded_tags"])
-        # ammessi anche i tag coniati nei Termini personali (in arrivo o salvati)
+        # fork: ammessi anche i tag coniati nei Termini personali (in arrivo o salvati)
         term_tags = {t["tag"] for t in
-                     server_config.parse_custom_terms(data.get("custom_terms"))} | \
+                     detectors_local.parse_custom_terms(data.get("custom_terms"))} | \
                     {t["tag"] for t in CUSTOM_TERMS}
         unknown = [t for t in tags if t not in TAG_NAMES and t not in term_tags]
         if unknown:
@@ -828,11 +831,12 @@ def settings_post():
     if tags is None and mapping is None and terms is None:
         return jsonify({"error": "Niente da salvare: passa excluded_tags, "
                                  "mapping_enabled e/o custom_terms."}), 400
-    saved = server_config.save_prefs(excluded_tags=tags, mapping_enabled=mapping,
-                                     custom_terms=terms)
-    EXCLUDED_TAGS = saved["excluded_tags"]
-    MAPPING_ENABLED = saved["mapping_enabled"]
-    CUSTOM_TERMS = saved["custom_terms"]
+    if tags is not None or mapping is not None:
+        saved = server_config.save_prefs(excluded_tags=tags, mapping_enabled=mapping)
+        EXCLUDED_TAGS = saved["excluded_tags"]
+        MAPPING_ENABLED = saved["mapping_enabled"]
+    if terms is not None:                              # fork: chiave separata
+        CUSTOM_TERMS = detectors_local.save_custom_terms(terms)
     return jsonify({"ok": True, "excluded_tags": EXCLUDED_TAGS,
                     "mapping_enabled": MAPPING_ENABLED,
                     "custom_terms": CUSTOM_TERMS})
