@@ -60,6 +60,16 @@ Queste cose valgono in ogni settore, senza che tu debba impostare niente.
 - **Puoi aggiungere le tue parole.** I Termini personali (🏷️ → 📌) sono un elenco di valori che
   vuoi sempre nascosti: il nome della tua sede, un numero di pratica, il cognome di una famiglia
   seguita da anni. Hanno la precedenza su tutto.
+- **La sessione si svuota da sola.** Dopo sette minuti che nessuno tocca il computer, testo,
+  documento, risultato e dizionario spariscono, con un avviso un minuto prima. È la risposta al
+  caso più comune: il computer di segreteria lasciato acceso con la pratica aperta.
+- **Ti ricorda quello che l'app non può fare al posto tuo.** Al primo avvio un promemoria spiega
+  come impostare il blocco automatico dello schermo, con una spunta per non rivederlo più; in
+  ⚙️ → **Buone abitudini** c'è una pagina sola su computer incustodito, servizi cloud sui
+  dispositivi personali, programmi che rubano le password, posta e messaggi.
+- **Se qualcuno lo fa girare su un server condiviso, si può chiudere a chiave.** Chi installa
+  l'app su una macchina raggiungibile dagli altri può imporre nome utente e password; se non lo
+  fa, il programma lo scrive all'avvio e mostra un avviso in pagina a chi la usa.
 
 ## Scuola
 
@@ -223,5 +233,24 @@ Quello dipende da te.
 | Il verbale del trattamento | 📋 Rapporto, accanto al risultato |
 | I valori che vuoi sempre coperti | 🏷️ → 📌 Termini personali |
 
-Il dettaglio tecnico, articolo per articolo, è in `CONFORMITA-CH.md`. Gli scheletri da compilare
-per il registro e per la valutazione d'impatto sono in `MODELLI-DOCUMENTAZIONE.md`.
+## Che cosa puoi verificare tu, senza fidarti
+
+Le affermazioni di questo rapporto sono controllabili, e vale la pena farlo prima di adottare lo
+strumento in un ente.
+
+- **Che non esca niente**: stacca la rete e usa l'app. Funziona uguale. Chi vuole la prova formale
+  la trova nel repository: c'è un controllo automatico che fallisce se qualcuno introduce una
+  chiamata verso l'esterno.
+- **Che il PDF sia davvero censurato**: apri il file prodotto e prova a selezionare il testo sotto
+  il rettangolo nero, o a cercarlo. Non c'è.
+- **Che il documento sparisca**: premi Pulisci, poi ricarica la pagina. Non torna niente.
+- **Quanto è buono il riconoscimento**: la misura pubblicata (0,989) è fatta su testi **italiani**.
+  Sui formati svizzeri esiste una prova separata, costruita con valori inventati. Nessuno dei due
+  numeri dice come si comporta sui **tuoi** documenti: quello si vede solo provandolo su una
+  decina di casi veri, e conviene farlo prima di decidere.
+
+---
+
+Il dettaglio tecnico, articolo per articolo, è in [CONFORMITA-CH.md](CONFORMITA-CH.md). Gli
+scheletri da compilare per il registro dei trattamenti, per la valutazione d'impatto e per
+l'informativa sono in [MODELLI-DOCUMENTAZIONE.md](MODELLI-DOCUMENTAZIONE.md).
