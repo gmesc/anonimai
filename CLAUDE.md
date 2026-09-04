@@ -88,7 +88,11 @@ modelli in `models/<versione>/`, artefatti dei run in `experiments/<run>/`, doc 
   TELEFONO/IBAN/CF/PIVA/carta/importo/targa/**URL**; IBAN/CF/PIVA/carta validati con checksum, che ha
   priorità sul modello). `URL` è un **23° tag solo-regex**: il modello non lo conosce; matcha schema,
   `www.` e domini nudi solo su una **lista chiusa di TLD** (senza, `p.iva`/`S.r.l.` diventerebbero
-  domini). `APP_VERSION`. Endpoint: `GET /health` (readiness senza inference, 200/503),
+  domini). **Profilo Svizzera** sempre attivo nei tag esistenti: AVS→`ID_DOC` (checksum EAN-13),
+  Cantoni→`PROVINCE`, NAP→`ZIPCODE` (19xx/20xx esclusi: anni), targa CH→`TARGA`. **Termini
+  personali** (🏷️→📌): lista `{value, tag}` in `prefs.json` (`custom_terms`, cap 200, ≥3
+  alfanumerici), match letterale con confini di parola in `detectors.match_custom_terms`,
+  priorità massima in `_merge` (source `utente`), tag liberi ammessi; su `/settings` GET/POST. `APP_VERSION`. Endpoint: `GET /health` (readiness senza inference, 200/503),
   `POST /analyze`, `POST /pdf`, `POST /preview`, `POST /pdf/preview`, `GET /doc/<id>/page/<n>.png`,
   `GET /doc/<id>/file.pdf`, `GET/POST /settings` (alias storico `/tags`), `GET/POST /config`,
   `GET /port-check`; CLI `--host`/`--port`/`--exclude-tags`/`--no-mapping`.

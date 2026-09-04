@@ -65,8 +65,9 @@ import pdf_export
 import server_config
 # Rete REGEX + CHECKSUM: modulo a parte, senza dipendenze dal modello. I nomi
 # restano importabili da qui (`app.detect_regex`) per non rompere chi li usa.
-from detectors import (DETECTORS, SOFT_REGEX_LABELS, cf_ok,  # noqa: F401
-                       detect_iban, detect_regex, iban_ok, luhn_ok, piva_ok)
+from detectors import (DETECTORS, SOFT_REGEX_LABELS, avs_ok, cf_ok,  # noqa: F401
+                       detect_iban, detect_regex, iban_ok, luhn_ok,
+                       match_custom_terms, piva_ok)
 from transformers import pipeline
 
 
@@ -236,22 +237,24 @@ TAGS = [
     ("TIME", "Ora", "Time of day", "ore 15:30"),
     ("STREET", "Via / piazza / corso", "Street / square", "Via Garibaldi"),
     ("BUILDINGNUM", "Numero civico", "Building number", "24"),
-    ("ZIPCODE", "CAP", "ZIP / postal code", "00185"),
+    ("ZIPCODE", "CAP / NAP svizzero", "ZIP / Swiss postal code (NAP)", "00185 · CH-6600"),
     ("CITY", "Città", "City", "Milano"),
-    ("PROVINCE", "Sigla della provincia", "Province code", "MI"),
+    ("PROVINCE", "Provincia / Cantone svizzero", "Province / Swiss canton", "MI · Canton Ticino"),
     ("EMAIL", "Email, PEC inclusa", "Email, certified mail included", "m.rossi@studio.it"),
     ("TELEPHONENUM", "Numero di telefono", "Phone number", "+39 333 1234567"),
     ("CF", "Codice fiscale (checksum verificato)", "Italian tax code (checksum verified)",
      "RSSMRA85H12F205Z"),
     ("PIVA", "Partita IVA (checksum verificato)", "VAT number (checksum verified)", "12345678901"),
-    ("ID_DOC", "Numero di documento d'identità (carta, passaporto, patente)",
-     "Identity document number (ID card, passport, driving licence)", "CA12345AB"),
+    ("ID_DOC", "Numero di documento d'identità (carta, passaporto, patente, n. AVS)",
+     "Identity document number (ID card, passport, driving licence, Swiss AVS number)",
+     "CA12345AB · 756.1234.5678.97"),
     ("IBAN", "IBAN / numero di conto (checksum verificato)",
      "IBAN / account number (checksum verified)", "IT60X0542811101000000123456"),
     ("CREDITCARDNUMBER", "Numero di carta di credito (Luhn verificato)",
      "Credit card number (Luhn verified)", "4111 1111 1111 1111"),
     ("AMOUNT", "Importo in denaro", "Money amount", "€ 12.500,00"),
-    ("TARGA", "Targa di veicolo", "Vehicle plate", "AB 123 CD"),
+    ("TARGA", "Targa di veicolo (anche svizzera)", "Vehicle plate (Swiss included)",
+     "AB 123 CD · TI 123456"),
     ("ORG", "Ragione sociale privata: società, studio legale, banca",
      "Private organization: company, law firm, bank", "Edilnord S.r.l."),
     ("DOCID", "Codice di un atto: ruolo generale, protocollo, repertorio, sentenza",
@@ -273,6 +276,9 @@ TAG_NAMES = [t[0] for t in TAGS]
 _prefs = server_config.load_prefs()
 EXCLUDED_TAGS = _prefs["excluded_tags"]
 MAPPING_ENABLED = _prefs["mapping_enabled"]
+# Termini personali: valori letterali che l'utente vuole SEMPRE rilevati, col
+# loro tag (anche una label nuova: il placeholder e i colori sono per-label).
+CUSTOM_TERMS = _prefs["custom_terms"]
 
 
 # --------------------------------------------------------------------------- #
@@ -332,7 +338,8 @@ def _merge(cands, text):
     i tag in SOFT_REGEX_LABELS, dove la forma non ha un checksum a confermarla."""
     order = sorted(
         cands,
-        key=lambda e: (1 if e["validated"] else 0,
+        key=lambda e: (1 if e["source"] == "utente" else 0,   # Termini personali: sopra tutto
+                       1 if e["validated"] else 0,
                        1 if (e["source"] == "regex"
                              and e["label"] not in SOFT_REGEX_LABELS) else 0,
                        e["score"], e["end"] - e["start"]),
@@ -400,7 +407,7 @@ def analyze(text, excluded=None, mapping_enabled=True):
     soggetto, ma da sola non fa risalire al valore."""
     excluded = set(excluded or ())
     model_ents, n_chunks = detect_model(text)
-    cands = model_ents + detect_regex(text)
+    cands = model_ents + detect_regex(text) + match_custom_terms(text, CUSTOM_TERMS)
     if excluded:
         cands = [e for e in cands if e["label"] not in excluded]
     kept = _merge(cands, text)
@@ -795,6 +802,7 @@ def settings_get():
         "tags": [{"tag": t, "it": it, "en": en, "example": ex} for t, it, en, ex in TAGS],
         "excluded_tags": EXCLUDED_TAGS,
         "mapping_enabled": MAPPING_ENABLED,
+        "custom_terms": CUSTOM_TERMS,
         "config_path": str(server_config.prefs_path()),
         "env_override": "PII_EXCLUDE_TAGS" in os.environ or "PII_MAPPING" in os.environ,
     })
@@ -803,22 +811,31 @@ def settings_get():
 @app.route("/settings", methods=["POST"])
 @app.route("/tags", methods=["POST"])
 def settings_post():
-    global EXCLUDED_TAGS, MAPPING_ENABLED
+    global EXCLUDED_TAGS, MAPPING_ENABLED, CUSTOM_TERMS
     data = request.get_json(silent=True) or {}
     tags = None
     if "excluded_tags" in data:
         tags = server_config.parse_tag_list(data["excluded_tags"])
-        unknown = [t for t in tags if t not in TAG_NAMES]
+        # ammessi anche i tag coniati nei Termini personali (in arrivo o salvati)
+        term_tags = {t["tag"] for t in
+                     server_config.parse_custom_terms(data.get("custom_terms"))} | \
+                    {t["tag"] for t in CUSTOM_TERMS}
+        unknown = [t for t in tags if t not in TAG_NAMES and t not in term_tags]
         if unknown:
             return jsonify({"error": f"Tag sconosciuti: {', '.join(unknown)}"}), 400
     mapping = data.get("mapping_enabled")
-    if tags is None and mapping is None:
-        return jsonify({"error": "Niente da salvare: passa excluded_tags e/o mapping_enabled."}), 400
-    saved = server_config.save_prefs(excluded_tags=tags, mapping_enabled=mapping)
+    terms = data.get("custom_terms") if "custom_terms" in data else None
+    if tags is None and mapping is None and terms is None:
+        return jsonify({"error": "Niente da salvare: passa excluded_tags, "
+                                 "mapping_enabled e/o custom_terms."}), 400
+    saved = server_config.save_prefs(excluded_tags=tags, mapping_enabled=mapping,
+                                     custom_terms=terms)
     EXCLUDED_TAGS = saved["excluded_tags"]
     MAPPING_ENABLED = saved["mapping_enabled"]
+    CUSTOM_TERMS = saved["custom_terms"]
     return jsonify({"ok": True, "excluded_tags": EXCLUDED_TAGS,
-                    "mapping_enabled": MAPPING_ENABLED})
+                    "mapping_enabled": MAPPING_ENABLED,
+                    "custom_terms": CUSTOM_TERMS})
 
 
 # --------------------------------------------------------------------------- #
@@ -1268,10 +1285,11 @@ tr:hover td{background:var(--hover)}
 /* modale dei tag */
 .tg-sub{font-size:12.5px;color:var(--muted);margin:-4px 0 14px;line-height:1.5;text-transform:none}
 .tg-bar{display:flex;gap:8px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
-.tg-bar .mini{height:30px;background:var(--panel);color:var(--muted);border:1px solid var(--line);
+.tg-bar .mini,.ct-add .mini{height:30px;background:var(--panel);color:var(--muted);
+              border:1px solid var(--line);
               border-radius:0;padding:0 10px;font-size:11px;font-weight:700;cursor:pointer;
               text-transform:uppercase;letter-spacing:.06em}
-.tg-bar .mini:hover{background:var(--hover);color:var(--ink)}
+.tg-bar .mini:hover,.ct-add .mini:hover{background:var(--hover);color:var(--ink)}
 .tg-bar .count{margin-left:auto;font-size:11px;color:var(--muted);font-weight:700;
                text-transform:uppercase;letter-spacing:.06em}
 .tg-list{max-height:46vh;overflow:auto;border:1px solid var(--line);padding:0;background:var(--panel)}
@@ -1288,6 +1306,28 @@ tr:hover td{background:var(--hover)}
 .tg-row .ex{font-size:11px;color:var(--muted);opacity:.75}
 .tg-row.off{opacity:.55}
 .tg-row.off .nm{text-decoration:line-through}
+
+/* Termini personali: stessa grammatica delle righe-tag qui sopra */
+.ct-head{margin:18px 0 4px;font-size:11px;font-weight:800;text-transform:uppercase;
+         letter-spacing:.12em;color:var(--muted)}
+.ct-add{display:flex;gap:8px;margin:8px 0 10px}
+.ct-add input{height:30px;border:1px solid var(--line);border-radius:0;background:var(--bg);
+              color:var(--ink);padding:0 9px;font-size:12.5px;
+              font-family:var(--font-text),var(--emoji-font),sans-serif}
+.ct-add input:focus{outline:2px solid var(--focus);outline-offset:-2px}
+#ctVal{flex:1;min-width:0}
+#ctTag{width:150px;text-transform:uppercase}
+.ct-list{border:1px solid var(--line);background:var(--panel);max-height:22vh;overflow:auto}
+.ct-list:empty{display:none}
+.ct-row{display:flex;align-items:center;gap:10px;padding:6px 10px;
+        border-bottom:1px solid var(--line-weak)}
+.ct-row:last-child{border-bottom:0}
+.ct-row .val{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+             font-size:12.5px}
+.ct-row .nm{font-family:ui-monospace,Consolas,monospace;font-size:11px;font-weight:700;flex:none}
+.ct-row .rm{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;
+            padding:0 4px;flex:none}
+.ct-row .rm:hover{color:var(--err-ink)}
 </style>
 </head>
 <body>
@@ -1515,6 +1555,15 @@ tr:hover td{background:var(--hover)}
       <span class="count" id="tgCount"></span>
     </div>
     <div class="tg-list" id="tgList"></div>
+    <div class="ct-head">📌 <span data-i18n="ct_title">Termini personali</span></div>
+    <div class="tg-sub" data-i18n="ct_sub">Valori che vuoi <b>sempre</b> anonimizzare (nome dello studio, un progetto, una sigla interna): match esatto, con il tag che scegli — anche uno nuovo. <b>Restano salvati su questo computer</b> (prefs.json).</div>
+    <div class="ct-add">
+      <input id="ctVal" data-i18n-ph="ct_val_ph" placeholder="es. Istituto Elvetico">
+      <input id="ctTag" list="ctTagList" data-i18n-ph="ct_tag_ph" placeholder="TAG (es. ORG)">
+      <datalist id="ctTagList"></datalist>
+      <button class="mini" onclick="addTerm()" data-i18n="ct_add">Aggiungi</button>
+    </div>
+    <div class="ct-list" id="ctList"></div>
     <div class="cfg-status" id="tgStatus"></div>
     <div class="cfg-btns" style="margin-top:14px">
       <button class="btn" onclick="saveTags()">💾 <span data-i18n="cfg_save">Salva</span></button>
@@ -1585,7 +1634,7 @@ const T = {
   chars:n=>n.toLocaleString('it'),
   set_title:"Impostazioni", set_tab_server:"Server", set_tab_how:"Come funziona",
   set_tab_sec:"Sicurezza", set_tab_cred:"Crediti", cfg_close:"Chiudi",
-  sec_body:"<h4>Prima di condividere</h4><ul><li><b>Rileggi sempre l'output.</b> Il modello può sbagliare: un nome fuori posto, una sigla scambiata per un'altra cosa. La rilettura è tua, non delegabile.</li><li><b>Se l'app ti avvisa, fermati.</b> Dopo il PDF può comparire «N valori sono rimasti in chiaro»: sono i <b>residui</b> (ancora leggibili nell'output) e i <b>saltati</b> (frammenti troppo corti per essere cercati senza devastare il documento). Vai a vederli.</li><li><b>Controlla i tag attivi</b> (🏷️): i tipi che deselezioni vengono rilevati ma <b>lasciati in chiaro</b> apposta. È una scelta tua, ma va ricordata prima di mandare fuori il file.</li></ul><h4>Il dizionario è la chiave</h4><ul><li>Il file <code>dizionario_anonimizzazione.json</code> contiene <b>tutte le PII in chiaro</b>. Chi ce l'ha può deanonimizzare qualsiasi cosa: <b>vale quanto il documento originale</b>.</li><li><b>Non allegarlo mai insieme</b> al documento anonimizzato, non metterlo nella stessa cartella condivisa, non incollarlo in un LLM.</li><li>Finché il dizionario esiste, quella che hai è una <b>pseudonimizzazione</b>: per il GDPR resta dato personale. Vuoi un'anonimizzazione <b>definitiva</b>? Spegni lo switch: nessuna chiave viene creata e il ripristino diventa impossibile, per tutti.</li><li>Il dizionario della sessione vive nel browser: <b>Pulisci</b> lo cancella. I documenti stanno in memoria e muoiono con l'app: sul disco non resta niente.</li></ul><h4>Quello che il testo non copre</h4><ul><li><b>Firme, timbri, loghi</b>: non sono testo, nessun modello li legge. Coprili con i <b>riquadri manuali</b> (✏️) — sotto il riquadro i pixel vengono cancellati davvero.</li><li><b>Scansioni e foto</b>: servono i file OCR. Se nella scheda Server l'OCR non risulta attivo, un PDF fotografato non può essere redatto — e l'app lo dice invece di consegnarti un file intatto.</li><li><b>Scritte verticali e a margine</b> (protocolli, sigle laterali): l'OCR le prende male. Riquadro manuale.</li></ul><h4>Quale bottone, quando</h4><ul><li><b>Copia testo</b> → per <i>conversare</i> col modello e poi ripristinare la risposta. Non porta con sé layout, firme, immagini.</li><li><b>PDF anonimo</b> → per <i>consegnare o caricare il documento</i>. È l'unico che protegge anche ciò che non è testo.</li><li>Nel dubbio: <b>PDF</b>, e rileggilo.</li></ul><h4>Rete</h4><ul><li>Il server ascolta su <code>127.0.0.1</code>: solo questo computer. Se lo esponi (<code>--host 0.0.0.0</code>, Docker su un server d'ufficio) chiunque nella rete può usarlo, e i documenti degli altri passano da lì: mettilo dietro a un accesso controllato.</li><li>Anche esposto, l'app non chiama nessuno: nessuna API, nessuna telemetria. Ciò che entra non esce.</li></ul>",
+  sec_body:"<h4>Prima di condividere</h4><ul><li><b>Rileggi sempre l'output.</b> Il modello può sbagliare: un nome fuori posto, una sigla scambiata per un'altra cosa. La rilettura è tua, non delegabile.</li><li><b>Se l'app ti avvisa, fermati.</b> Dopo il PDF può comparire «N valori sono rimasti in chiaro»: sono i <b>residui</b> (ancora leggibili nell'output) e i <b>saltati</b> (frammenti troppo corti per essere cercati senza devastare il documento). Vai a vederli.</li><li><b>Controlla i tag attivi</b> (🏷️): i tipi che deselezioni vengono rilevati ma <b>lasciati in chiaro</b> apposta. È una scelta tua, ma va ricordata prima di mandare fuori il file.</li></ul><h4>Il dizionario è la chiave</h4><ul><li>Il file <code>dizionario_anonimizzazione.json</code> contiene <b>tutte le PII in chiaro</b>. Chi ce l'ha può deanonimizzare qualsiasi cosa: <b>vale quanto il documento originale</b>.</li><li><b>Non allegarlo mai insieme</b> al documento anonimizzato, non metterlo nella stessa cartella condivisa, non incollarlo in un LLM.</li><li>Finché il dizionario esiste, quella che hai è una <b>pseudonimizzazione</b>: per il GDPR resta dato personale. Vuoi un'anonimizzazione <b>definitiva</b>? Spegni lo switch: nessuna chiave viene creata e il ripristino diventa impossibile, per tutti.</li><li>Il dizionario della sessione vive nel browser: <b>Pulisci</b> lo cancella. I documenti stanno in memoria e muoiono con l'app: sul disco non resta niente.</li><li>Unica eccezione voluta: i <b>Termini personali</b> (🏷️ → 📌) sono salvati in chiaro in <code>prefs.json</code> su questo computer — sono i valori che hai chiesto di rilevare sempre. Rimuovili da lì se il computer cambia mani.</li></ul><h4>Quello che il testo non copre</h4><ul><li><b>Firme, timbri, loghi</b>: non sono testo, nessun modello li legge. Coprili con i <b>riquadri manuali</b> (✏️) — sotto il riquadro i pixel vengono cancellati davvero.</li><li><b>Scansioni e foto</b>: servono i file OCR. Se nella scheda Server l'OCR non risulta attivo, un PDF fotografato non può essere redatto — e l'app lo dice invece di consegnarti un file intatto.</li><li><b>Scritte verticali e a margine</b> (protocolli, sigle laterali): l'OCR le prende male. Riquadro manuale.</li></ul><h4>Quale bottone, quando</h4><ul><li><b>Copia testo</b> → per <i>conversare</i> col modello e poi ripristinare la risposta. Non porta con sé layout, firme, immagini.</li><li><b>PDF anonimo</b> → per <i>consegnare o caricare il documento</i>. È l'unico che protegge anche ciò che non è testo.</li><li>Nel dubbio: <b>PDF</b>, e rileggilo.</li></ul><h4>Rete</h4><ul><li>Il server ascolta su <code>127.0.0.1</code>: solo questo computer. Se lo esponi (<code>--host 0.0.0.0</code>, Docker su un server d'ufficio) chiunque nella rete può usarlo, e i documenti degli altri passano da lì: mettilo dietro a un accesso controllato.</li><li>Anche esposto, l'app non chiama nessuno: nessuna API, nessuna telemetria. Ciò che entra non esce.</li></ul>",
   tip_copy:"<b>Testo anonimizzato negli appunti.</b> Incollalo nella chat: la risposta che torna contiene i placeholder e in modalità <b>Deanonimizza</b> ridiventa leggibile. Non porta con sé impaginazione, firme e immagini — per quelle serve il PDF.",
   tip_pdf:"<b>Il documento vero, redatto.</b> Layout intatto, PII rimosse dal contenuto del file, pixel cancellati sotto i riquadri manuali, metadati e allegati ripuliti. È la scelta giusta per caricare o consegnare il file. <span class=\"warn\">Rileggilo prima di condividerlo:</span> se qualcosa resta in chiaro l'app te lo dice.",
   tip_dict:"<span class=\"warn\">🔒 Contiene tutte le PII in chiaro.</span> È la chiave che deanonimizza: vale quanto il documento originale. Serve a ripristinare in una sessione futura. Tienilo separato dal documento anonimizzato, non allegarlo mai insieme e non incollarlo in un LLM.",
@@ -1601,6 +1650,11 @@ const T = {
   tg_all:"Seleziona tutti", tg_none:"Nessuno",
   tg_saved:"Selezione salvata", tg_err:"Salvataggio non riuscito",
   tg_note:p=>"Salvato in "+p+" · vale anche per l'API /analyze.",
+  ct_title:"Termini personali",
+  ct_sub:"Valori che vuoi <b>sempre</b> anonimizzare (nome dello studio, un progetto, una sigla interna): match esatto, con il tag che scegli — anche uno nuovo. <b>Restano salvati su questo computer</b> (prefs.json).",
+  ct_val_ph:"es. Istituto Elvetico", ct_tag_ph:"TAG (es. ORG)", ct_add:"Aggiungi",
+  ct_del:"Rimuovi", ct_short:"Termine troppo corto: servono almeno 3 caratteri",
+  ct_badtag:"Tag non valido: 2-20 tra lettere, cifre e _",
   tg_env:"⚠️ La variabile d'ambiente PII_EXCLUDE_TAGS ha la precedenza al prossimo avvio.",
   tg_count:(on,tot)=>on+" di "+tot+" tag anonimizzati",
   st_excl:"tag esclusi",
@@ -1662,7 +1716,7 @@ const T = {
   chars:n=>n.toLocaleString('en'),
   set_title:"Settings", set_tab_server:"Server", set_tab_how:"How it works",
   set_tab_sec:"Security", set_tab_cred:"Credits", cfg_close:"Close",
-  sec_body:"<h4>Before you share</h4><ul><li><b>Always re-read the output.</b> The model can be wrong: a name missed, an abbreviation mistaken for something else. That check is yours and cannot be delegated.</li><li><b>If the app warns you, stop.</b> After the PDF you may see “N values were left in the clear”: those are <b>residuals</b> (still readable in the output) and <b>skipped</b> values (fragments too short to search for without wrecking the document). Go and look at them.</li><li><b>Check the active tags</b> (🏷️): the types you untick are still detected but <b>left in the clear</b> on purpose. Your choice — worth remembering before the file goes out.</li></ul><h4>The dictionary is the key</h4><ul><li>The file <code>dizionario_anonimizzazione.json</code> holds <b>every PII in the clear</b>. Whoever has it can de-anonymise anything: <b>it is worth as much as the original document</b>.</li><li><b>Never attach it together</b> with the anonymised document, never put it in the same shared folder, never paste it into an LLM.</li><li>As long as the dictionary exists you have <b>pseudonymisation</b>: under the GDPR that is still personal data. Want <b>irreversible</b> anonymisation? Switch the dictionary off: no key is created and restoring becomes impossible, for everyone.</li><li>The session dictionary lives in the browser: <b>Clear</b> deletes it. Documents live in memory and die with the app: nothing is left on disk.</li></ul><h4>What text does not cover</h4><ul><li><b>Signatures, stamps, logos</b>: not text, no model reads them. Cover them with the <b>manual boxes</b> (✏️) — under the box the pixels are actually erased.</li><li><b>Scans and photos</b>: they need the OCR files. If OCR is not active, a photographed PDF cannot be redacted — and the app says so instead of handing you an untouched file.</li><li><b>Vertical and margin writing</b> (protocol stamps, side codes): OCR reads them badly. Use a manual box.</li></ul><h4>Which button, when</h4><ul><li><b>Copy text</b> → to <i>talk</i> to the model and restore its answer afterwards. Carries no layout, signatures or images.</li><li><b>Anonymized PDF</b> → to <i>hand over or upload the document</i>. The only one that also protects what is not text.</li><li>When in doubt: <b>PDF</b>, and re-read it.</li></ul><h4>Network</h4><ul><li>The server listens on <code>127.0.0.1</code>: this machine only. If you expose it (<code>--host 0.0.0.0</code>, Docker on an office server) anyone on the network can use it and other people's documents go through it: put it behind controlled access.</li><li>Even exposed, the app calls nobody: no API, no telemetry. What comes in does not go out.</li></ul>",
+  sec_body:"<h4>Before you share</h4><ul><li><b>Always re-read the output.</b> The model can be wrong: a name missed, an abbreviation mistaken for something else. That check is yours and cannot be delegated.</li><li><b>If the app warns you, stop.</b> After the PDF you may see “N values were left in the clear”: those are <b>residuals</b> (still readable in the output) and <b>skipped</b> values (fragments too short to search for without wrecking the document). Go and look at them.</li><li><b>Check the active tags</b> (🏷️): the types you untick are still detected but <b>left in the clear</b> on purpose. Your choice — worth remembering before the file goes out.</li></ul><h4>The dictionary is the key</h4><ul><li>The file <code>dizionario_anonimizzazione.json</code> holds <b>every PII in the clear</b>. Whoever has it can de-anonymise anything: <b>it is worth as much as the original document</b>.</li><li><b>Never attach it together</b> with the anonymised document, never put it in the same shared folder, never paste it into an LLM.</li><li>As long as the dictionary exists you have <b>pseudonymisation</b>: under the GDPR that is still personal data. Want <b>irreversible</b> anonymisation? Switch the dictionary off: no key is created and restoring becomes impossible, for everyone.</li><li>The session dictionary lives in the browser: <b>Clear</b> deletes it. Documents live in memory and die with the app: nothing is left on disk.</li><li>One deliberate exception: <b>Personal terms</b> (🏷️ → 📌) are saved in the clear in <code>prefs.json</code> on this computer — they are the values you asked to always detect. Remove them there if the computer changes hands.</li></ul><h4>What text does not cover</h4><ul><li><b>Signatures, stamps, logos</b>: not text, no model reads them. Cover them with the <b>manual boxes</b> (✏️) — under the box the pixels are actually erased.</li><li><b>Scans and photos</b>: they need the OCR files. If OCR is not active, a photographed PDF cannot be redacted — and the app says so instead of handing you an untouched file.</li><li><b>Vertical and margin writing</b> (protocol stamps, side codes): OCR reads them badly. Use a manual box.</li></ul><h4>Which button, when</h4><ul><li><b>Copy text</b> → to <i>talk</i> to the model and restore its answer afterwards. Carries no layout, signatures or images.</li><li><b>Anonymized PDF</b> → to <i>hand over or upload the document</i>. The only one that also protects what is not text.</li><li>When in doubt: <b>PDF</b>, and re-read it.</li></ul><h4>Network</h4><ul><li>The server listens on <code>127.0.0.1</code>: this machine only. If you expose it (<code>--host 0.0.0.0</code>, Docker on an office server) anyone on the network can use it and other people's documents go through it: put it behind controlled access.</li><li>Even exposed, the app calls nobody: no API, no telemetry. What comes in does not go out.</li></ul>",
   tip_copy:"<b>Anonymised text in the clipboard.</b> Paste it into the chat: the answer comes back with the placeholders and becomes readable again in <b>De-anonymize</b> mode. It carries no layout, signatures or images — for those you need the PDF.",
   tip_pdf:"<b>The real document, redacted.</b> Layout intact, PII removed from the file's content, pixels erased under the manual boxes, metadata and attachments scrubbed. The right choice to upload or hand over the file. <span class=\"warn\">Re-read it before sharing:</span> if anything is left in the clear the app tells you.",
   tip_dict:"<span class=\"warn\">🔒 It holds every PII in the clear.</span> This is the key that de-anonymises: worth as much as the original document. Use it to restore in a later session. Keep it apart from the anonymised document, never attach them together, never paste it into an LLM.",
@@ -1678,6 +1732,11 @@ const T = {
   tg_all:"Select all", tg_none:"None",
   tg_saved:"Selection saved", tg_err:"Could not save",
   tg_note:p=>"Saved to "+p+" · also applies to the /analyze API.",
+  ct_title:"Personal terms",
+  ct_sub:"Values you <b>always</b> want anonymized (your firm's name, a project, an internal code): exact match, with the tag you choose — even a new one. <b>They stay saved on this computer</b> (prefs.json).",
+  ct_val_ph:"e.g. Istituto Elvetico", ct_tag_ph:"TAG (e.g. ORG)", ct_add:"Add",
+  ct_del:"Remove", ct_short:"Term too short: at least 3 characters needed",
+  ct_badtag:"Invalid tag: 2-20 letters, digits or _",
   tg_env:"⚠️ The PII_EXCLUDE_TAGS environment variable takes precedence on next startup.",
   tg_count:(on,tot)=>on+" of "+tot+" tags anonymized",
   st_excl:"excluded tags",
@@ -2330,6 +2389,36 @@ function renderTags(){
   tgCount();
 }
 function tgCount(){$('tgCount').textContent=T[L].tg_count(TAGS.length-EXCL.size,TAGS.length);}
+
+/* ---- Termini personali (lista {value, tag} salvata in prefs.json) ---- */
+let TERMS=[];
+function renderTerms(){
+  const list=$('ctList');list.innerHTML='';
+  for(const [i,t] of TERMS.entries()){
+    const c=colors(t.tag);
+    const row=document.createElement('div');row.className='ct-row';
+    row.innerHTML=`<span class="nm" style="color:${c.tx}">${escapeHtml(t.tag)}</span>`+
+      `<span class="val">${escapeHtml(t.value)}</span>`+
+      `<button class="rm" title="${tt('ct_del')}">✕</button>`;
+    row.querySelector('.rm').onclick=()=>{TERMS.splice(i,1);renderTerms();};
+    list.appendChild(row);
+  }
+  const dl=$('ctTagList');dl.innerHTML='';
+  for(const t of TAGS){const o=document.createElement('option');o.value=t.tag;dl.appendChild(o);}
+}
+function addTerm(){
+  const val=$('ctVal').value.trim();
+  const tag=$('ctTag').value.trim().toUpperCase().replace(/\s+/g,'_');
+  const alnum=(val.match(/[\p{L}\p{N}]/gu)||[]).length;
+  if(alnum<3){toast(tt('ct_short'),false);return;}
+  if(!/^[A-Z0-9_]{2,20}$/.test(tag)){toast(tt('ct_badtag'),false);return;}
+  if(TERMS.some(t=>t.value.toLowerCase()===val.toLowerCase()&&t.tag===tag)){return;}
+  TERMS.push({value:val,tag});
+  $('ctVal').value='';$('ctTag').value='';
+  renderTerms();
+}
+$('ctVal').addEventListener('keydown',e=>{if(e.key==='Enter')addTerm();});
+$('ctTag').addEventListener('keydown',e=>{if(e.key==='Enter')addTerm();});
 function setAllTags(on){
   EXCL=on?new Set():new Set(TAGS.map(t=>t.tag));
   renderTags();
@@ -2340,7 +2429,9 @@ async function openTags(){
   $('tgStatus').className='cfg-status';$('tgStatus').textContent='';
   $('tgNote').innerHTML=(TAGS_META.env_override?'<b>'+tt('tg_env')+'</b><br>':'')+
     T[L].tg_note(TAGS_META.config_path||'');
+  TERMS=(TAGS_META.custom_terms||[]).map(t=>({value:t.value,tag:t.tag}));
   renderTags();
+  renderTerms();
   $('tagsOverlay').classList.add('open');
 }
 function closeTags(){$('tagsOverlay').classList.remove('open');loadTags();}  // ricarica: annulla = scarta
@@ -2348,10 +2439,11 @@ $('tagsOverlay').addEventListener('click',e=>{if(e.target===$('tagsOverlay'))clo
 async function saveTags(){
   try{
     const r=await fetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({excluded_tags:[...EXCL]})});
+      body:JSON.stringify({excluded_tags:[...EXCL],custom_terms:TERMS})});
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'');
     EXCL=new Set(d.excluded_tags||[]);
+    TAGS_META.custom_terms=d.custom_terms||[];
     toast(tt('tg_saved'));
     $('tagsOverlay').classList.remove('open');
   }catch(e){$('tgStatus').className='cfg-status fail';$('tgStatus').textContent=tt('tg_err');}

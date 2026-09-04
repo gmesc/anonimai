@@ -5,6 +5,34 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-04 — profilo Svizzera/Ticino + Termini personali (`src/app/`)
+
+L'app deve servire anche il sistema svizzero (l'utente lavora su atti ticinesi) e ogni
+verticale — scuola, medico, studio legale — ha item suoi da rilevare. Due risposte, entrambe
+**senza retraining**: gli identificativi CH hanno un formato (quindi rete regex+checksum), e
+gli item specifici di un'installazione sono valori letterali (quindi lista utente).
+
+- **Identificativi CH nei tag esistenti** (`detectors.py`): numero **AVS** → `ID_DOC`
+  (regex + **checksum EAN-13**, la tassonomia manda lì ogni numero previdenziale personale);
+  **Cantoni** → `PROVINCE` (nomi non ambigui da soli; «Canton(e) X» copre anche Uri, Giura e
+  le sigle — mai le sigle nude: «ti» è una parola); **NAP** → `ZIPCODE` (`CH-####` sempre;
+  il 4-cifre nudo solo davanti a località capitalizzata, e 19xx/20xx esclusi perché anni —
+  al prezzo dei NAP romandi scritti senza `CH-`); **targa svizzera** → `TARGA` (sigla
+  cantonale maiuscola + 3-6 cifre). Sempre attivi: additivi e innocui su documenti italiani.
+  Legenda con doppio identificativo («CAP / NAP», «Provincia / Cantone»), esempi che passano
+  il proprio checksum (lezione della #99: `756.1234.5678.97` è valido).
+- **Termini personali** (🏷️ → 📌): lista `{value, tag}` in `prefs.json` (non `config.json`:
+  Tauri lo riscrive per intero) — valori che l'utente vuole **sempre** anonimizzati, match
+  letterale case-insensitive con confini di parola (stessa disciplina del matching PDF),
+  **priorità massima in fusione** (sopra il modello, come il checksum: un termine inserito a
+  mano è la dichiarazione più esplicita possibile). Tag libero ammesso (`[PROGETTO_1]`):
+  placeholder e colori sono già per-label. Minimo 3 alfanumerici a voce (la trappola dei
+  valori corti), tetto 200 voci. `/settings` GET/POST esteso con `custom_terms`.
+  La scheda Sicurezza dichiara l'eccezione: la lista vive **in chiaro su disco**, per scelta.
+- Prove in `tests/test_svizzera.py` (18 test, senza modello). La strada per categorie
+  **semantiche** nuove (retraining con slot+template, come i 5 tag legali IT) resta
+  documentata ma non serviva qui: tutto il pacchetto CH è formato o lista chiusa.
+
 ## 2026-08-21 — zoom al puntatore sulle anteprime, specchiato fra le due colonne (chiude #92)
 
 L'issue #92 chiedeva lo zoom «per poter leggere chiaramente il testo, e capire cosa è stato
