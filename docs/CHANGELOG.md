@@ -37,6 +37,19 @@ manomesso. Tutti e tre erano coperti da promesse (README, invariante 1) e da nes
   limiti restino scritti e che lo 0,989 sia attribuito al benchmark italiano **accanto** al
   numero. Ha trovato tre metriche non attribuite (badge del README, tabella dei risultati,
   statistica del sito), ora corrette.
+- ⚠️ **La prima versione del lint bloccava 3 claim falsi su 8.** Scoperto provandoli, non
+  rileggendo le regex: «guarantees **full** anonymization» passava perche' il pattern
+  pretendeva la parola subito dopo, e le formule assolute («tutti i dati vengono rimossi»,
+  «sei in regola con la nLPD», «niente puo' sfuggire») non erano previste. Regex allargate a
+  tre famiglie — garanzia di risultato, assolutismo, esito giuridico promesso — e soprattutto
+  la batteria e' ora **dentro il test**: 26 claim falsi che devono essere riconosciuti e 8
+  frasi oneste che devono passare (il rovescio conta quanto il dritto: un lint che censura
+  «il modello puo' sbagliare» spinge a tacere i limiti). `trova_claim()` lavora su stringhe,
+  non su file: la batteria gira in CI senza toccare i documenti. Verificato che svuotare
+  `VIETATI` o allargare le negazioni rende la suite rossa.
+- **Il lint resta attivo finche' non arriva un testo validato da un avvocato**: fino ad allora
+  `TERMS.md` e `docs/CONFORMITA-CH.md` sono bozze dichiarate tali, e nessun claim nuovo entra
+  nei testi pubblici senza passare da qui.
 - **`src/app/smoke_offline.py`**: `socket.connect` sostituito da una versione che lancia su
   qualunque indirizzo non-loopback, poi 22 endpoint esercitati col modello vero — testo, PDF
   nativo, scansione con OCR, riquadri manuali, anteprime a 110 e 220 dpi. Esito: 22/22, zero

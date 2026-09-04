@@ -2,6 +2,8 @@
 
 > **Bozza da far validare da un avvocato** (diritto della protezione dei dati e delle tecnologie,
 > Svizzera). Lo stesso testo compare nell'app (⚙️ → Condizioni) e viene mostrato al primo avvio.
+> Finche' non arriva la versione validata, questo resta un testo provvisorio e ogni frase nuova
+> nei testi pubblici passa da `tests/test_claims.py`, che vieta i claim non sostenibili.
 > English summary at the end.
 
 ## 1. Che cos'è AnonimAI
