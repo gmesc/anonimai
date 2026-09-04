@@ -1,0 +1,715 @@
+<!doctype html>
+<html lang="it" data-theme="">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guida ad AnonimAI — anonimizzare un documento senza farlo uscire dal computer</title>
+<meta name="description" content="Guida illustrata all'app AnonimAI: anonimizzare testi e PDF in locale, riquadri manuali, OCR, dizionario reversibile, deanonimizzazione.">
+<link rel="stylesheet" href="assets/stile-guida.css?v=1">
+</head>
+<body>
+<a class="skip" href="#contenuto">Salta al contenuto</a>
+
+<header class="topbar">
+  <a class="brand" href="#top">
+    <span class="cap">🕵️</span>
+    <b>Guida ad AnonimAI</b>
+    <span>v2.0.0</span>
+  </a>
+  <button class="tbtn menubtn" id="menuBtn" aria-label="Indice">☰ Indice</button>
+  <span class="tbsep"></span>
+  <button class="tbtn" id="temaBtn" aria-label="Tema chiaro o scuro">◐ Tema</button>
+</header>
+
+<div class="wrap">
+  <nav class="sidebar" aria-label="Indice della guida">
+    <h2>In questa guida</h2>
+    <ol class="toc" id="toc"></ol>
+    <div class="sidebar-foot">Schermate scattate sull'app vera, versione 2.0.0 · modello rizzo-pii-0.3B v1.5.0</div>
+  </nav>
+
+  <main id="contenuto">
+  <article id="top">
+
+    <p class="kicker">Manuale illustrato · italiano</p>
+    <h1>AnonimAI</h1>
+    <p class="lead">Un'app che legge i tuoi atti, contratti e sentenze, cancella i dati
+    personali e ti restituisce un documento che puoi finalmente incollare in ChatGPT
+    senza consegnargli il tuo cliente. Tutto succede dentro il tuo computer: niente
+    esce, nemmeno per un istante.</p>
+
+    <div class="callout eli5">
+      <div class="ch">In due righe</div>
+      <p>Metti dentro un documento. L'app trova i nomi, i codici fiscali, gli IBAN, gli
+      indirizzi — e li sostituisce con etichette come <code>[FULLNAME_1]</code>. Tu porti
+      fuori il documento etichettato. Quando l'intelligenza artificiale ti risponde,
+      l'app rimette i nomi veri al posto delle etichette.</p>
+    </div>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="finestra">
+      <h2 data-n="01">La finestra, in un colpo d'occhio</h2>
+
+      <p>All'apertura vedi due colonne. A sinistra ciò che dai tu, a destra ciò che
+      l'app ti ridà. In mezzo non c'è nient'altro: nessun menu nascosto, nessuna
+      procedura guidata.</p>
+
+      <figure>
+        <img src="img/01-finestra-vuota.png" alt="La finestra di AnonimAI appena aperta, con le due colonne vuote">
+        <figcaption>La finestra appena aperta. A sinistra «① Il tuo documento», a destra «② Risultato».</figcaption>
+      </figure>
+
+      <h3 id="testata">La testata</h3>
+      <figure>
+        <img src="img/02-topbar.png" alt="La barra in alto con i sette comandi numerati">
+        <figcaption>La riga in alto: sette comandi, sempre gli stessi.</figcaption>
+      </figure>
+
+      <ol class="legenda">
+        <li data-n="1"><b>🕵️ AnonimAI — Anonimizza</b>: non è solo un logo, è un
+          <b>interruttore</b>. Cliccandolo passi a <b>Deanonimizza</b> e ritorni indietro.
+          L'etichetta accanto al nome ti dice sempre dove sei.</li>
+        <li data-n="2"><b>100% in locale</b>: il promemoria che i tuoi dati non stanno
+          viaggiando da nessuna parte.</li>
+        <li data-n="3"><b>🇮🇹 IT / 🇬🇧 EN</b>: la lingua dell'interfaccia. Non cambia
+          nulla di come vengono trovati i dati.</li>
+        <li data-n="4"><b>☀️/🌙</b>: tema chiaro o scuro.</li>
+        <li data-n="5"><b>🏷️</b>: quali tipi di dato nascondere, e i tuoi
+          <b>Termini personali</b>. Vedi il <a href="#tag">capitolo 10</a>.</li>
+        <li data-n="6"><b>⚙️</b>: le Impostazioni, in quattro schede. Vedi il
+          <a href="#impostazioni">capitolo 13</a>.</li>
+        <li data-n="7"><b>⚠️</b>: l'avviso «Versione in sviluppo». Cliccalo e leggilo
+          una volta: dice che il modello può sbagliare e che va sempre riletto.</li>
+      </ol>
+
+      <h3 id="colonne">Le due colonne</h3>
+      <figure>
+        <img src="img/03-due-colonne.png" alt="Le due colonne con sei punti numerati">
+        <figcaption>Sei posti da conoscere: sono tutto ciò che serve per il lavoro di ogni giorno.</figcaption>
+      </figure>
+
+      <ol class="legenda">
+        <li data-n="1">Il riquadro dove <b>incolli il testo</b> — oppure dove compare il
+          testo estratto dal PDF che hai aperto.</li>
+        <li data-n="2"><b>🛡️ Anonimizza</b>: il bottone che fa partire tutto.</li>
+        <li data-n="3">Lo switch <b>Dizionario reversibile</b>. Acceso = potrai tornare
+          indietro. Spento = l'anonimizzazione è definitiva (<a href="#dizionario">capitolo 11</a>).</li>
+        <li data-n="4">Dove appare il risultato.</li>
+        <li data-n="5">Le tre viste del risultato: <b>Anteprima</b>, <b>Testo da copiare</b>,
+          <b>PDF censurato</b>.</li>
+        <li data-n="6">I tre bottoni per portarti via il lavoro (<a href="#bottoni">capitolo 4</a>).</li>
+      </ol>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="primo-giro">
+      <h2 data-n="02">Il primo giro: un testo incollato</h2>
+
+      <p>Il modo più veloce per capire l'app è incollare due righe e premere il bottone.</p>
+
+      <ol class="passi">
+        <li>Clicca dentro il riquadro di sinistra e incolla il testo.</li>
+        <li>Premi <b>🛡️ Anonimizza</b>.</li>
+        <li>Aspetta qualche secondo: il modello gira sul <b>processore</b> del tuo
+          computer, non su un server.</li>
+      </ol>
+
+      <figure>
+        <img src="img/04-testo-incollato.png" alt="Testo incollato nella colonna di sinistra, con il puntatore sul bottone Anonimizza">
+        <figcaption>Il testo è dentro. Ora il bottone <b>Anonimizza</b>.</figcaption>
+      </figure>
+
+      <figure>
+        <img src="img/05-risultato.png" alt="Il risultato: a destra il testo con le PII evidenziate, sotto il dizionario">
+        <figcaption>Fatto. A destra ogni dato personale è diventato un'etichetta colorata;
+        in basso è comparsa una tabella nuova, il <b>Dizionario reversibile</b>.</figcaption>
+      </figure>
+
+      <figure class="media">
+        <img src="img/06-anteprima-tag.png" alt="Primo piano dell'anteprima con i placeholder colorati">
+        <figcaption>Ogni etichetta ha un colore per tipo e un numero: <code>FULLNAME_1</code>,
+        <code>CITY_1</code>, <code>IBAN_1</code>. Lo stesso numero significa <b>la stessa persona</b>,
+        lo stesso conto, la stessa città. Il segno <b>✓</b> accanto a un'etichetta vuol dire che
+        il valore è stato verificato con un calcolo matematico (il codice fiscale, l'IBAN e la
+        partita IVA hanno una cifra di controllo: se torna, non è un caso).</figcaption>
+      </figure>
+
+      <div class="callout attenzione">
+        <div class="ch">Da ricordare</div>
+        <p>Il modello non è perfetto. Può saltare un nome scritto in modo strano o
+        scambiare una sigla per qualcos'altro. <b>La rilettura è tua e non si delega.</b></p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="risultato">
+      <h2 data-n="03">Che cosa ti sta dicendo il risultato</h2>
+
+      <h3 id="dizionario-tabella">La tabella in fondo</h3>
+      <figure>
+        <img src="img/07-dizionario.png" alt="La card Dizionario reversibile con i numeri, la legenda e la tabella">
+        <figcaption>Il <b>Dizionario reversibile</b>: la corrispondenza fra ogni etichetta e il valore vero.</figcaption>
+      </figure>
+
+      <ol class="legenda">
+        <li data-n="1">I <b>conti</b>: quante entità in tutto, quanti valori diversi,
+          quante trovate dal modello e quante dalla rete di espressioni regolari con
+          <b>checksum</b>, e la lunghezza del testo.</li>
+        <li data-n="2">La <b>legenda</b> dei tipi trovati, con quante volte ciascuno.
+          Cliccando un tipo lo spegni nell'anteprima: serve a guardare una cosa alla volta,
+          non cambia il risultato.</li>
+        <li data-n="3">La <b>tabella</b>: etichetta → valore originale → tipo. Questa
+          tabella è la chiave del ritorno indietro. Vale quanto il documento originale.</li>
+      </ol>
+
+      <h3 id="tre-viste">Le tre viste</h3>
+      <figure class="media">
+        <img src="img/08-tre-viste.png" alt="Le tre viste del risultato: Anteprima, Testo da copiare, PDF censurato">
+        <figcaption>In alto a destra scegli come guardare il risultato.</figcaption>
+      </figure>
+      <ol class="legenda">
+        <li data-n="1"><b>Anteprima</b>: il testo con le etichette colorate. È per capire,
+          non per copiare.</li>
+        <li data-n="2"><b>Testo da copiare</b>: lo stesso testo, pulito, pronto da incollare
+          in una chat.</li>
+        <li data-n="3"><b>PDF censurato</b>: il documento vero, redatto, pagina per pagina
+          (funziona anche se avevi incollato solo del testo: in quel caso il PDF viene
+          impaginato da zero).</li>
+      </ol>
+
+      <figure class="media">
+        <img src="img/09-testo-da-copiare.png" alt="La vista Testo da copiare">
+        <figcaption>«Testo da copiare»: è questo che finisce nella chat.</figcaption>
+      </figure>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="bottoni">
+      <h2 data-n="04">I tre bottoni, e quale scegliere</h2>
+
+      <p>Sotto il risultato ci sono tre bottoni. Se ci lasci sopra il puntatore per un
+      secondo, ciascuno ti spiega da solo a cosa serve.</p>
+
+      <div class="griglia2">
+        <figure>
+          <img src="img/10-tip-copia.png" alt="Popup del bottone Copia testo">
+          <figcaption><b>📋 Copia testo</b> — per <i>parlare</i> con il modello.</figcaption>
+        </figure>
+        <figure>
+          <img src="img/11-tip-pdf.png" alt="Popup del bottone PDF anonimo">
+          <figcaption><b>⬇️ PDF anonimo</b> — per <i>consegnare</i> il documento.</figcaption>
+        </figure>
+        <figure>
+          <img src="img/12-tip-dizionario.png" alt="Popup del bottone Scarica dizionario">
+          <figcaption><b>⬇️ Scarica dizionario</b> — la <i>chiave</i> per tornare indietro.</figcaption>
+        </figure>
+      </div>
+
+      <div class="tabwrap">
+      <table>
+        <thead><tr><th>Vuoi…</th><th>Usa</th><th>Perché</th></tr></thead>
+        <tbody>
+          <tr><td>chiedere all'AI di riassumere, rispondere, riformulare</td>
+              <td><b>📋 Copia testo</b></td>
+              <td>porta solo le parole: niente impaginazione, niente firme, niente immagini</td></tr>
+          <tr><td>mandare o caricare il documento</td>
+              <td><b>⬇️ PDF anonimo</b></td>
+              <td>è l'unico che protegge anche ciò che <b>non</b> è testo</td></tr>
+          <tr><td>poter ricostruire i nomi veri domani, o su un altro computer</td>
+              <td><b>⬇️ Scarica dizionario</b></td>
+              <td>salva il file <code>dizionario_anonimizzazione.json</code></td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <div class="callout no">
+        <div class="ch">Il file da custodire</div>
+        <p>Il dizionario contiene <b>tutte le PII in chiaro</b>. Chi ce l'ha può
+        deanonimizzare qualunque cosa. Non allegarlo mai insieme al documento
+        anonimizzato, non tenerlo nella stessa cartella condivisa, non incollarlo in
+        un LLM.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="pdf">
+      <h2 data-n="05">Un PDF vero</h2>
+
+      <p>Non c'è un riquadro «trascina qui». <b>Puoi lasciare il file in un punto
+      qualsiasi della finestra</b>: mentre lo trascini compare un velo con la scritta
+      «Rilascia il documento — PDF, .md o .txt».</p>
+
+      <figure>
+        <img src="img/13-drop-overlay.png" alt="Il velo che compare trascinando un file sulla finestra">
+        <figcaption>Trascinando un file: tutta la finestra diventa la zona di rilascio.</figcaption>
+      </figure>
+
+      <p>Appena il PDF è dentro, la colonna di sinistra <b>lo mostra</b>: non il testo
+      grezzo, il documento come sarebbe stampato.</p>
+
+      <figure>
+        <img src="img/14-pdf-caricato.png" alt="Il PDF caricato, mostrato pagina per pagina nella colonna di sinistra">
+        <figcaption>Il PDF, pagina per pagina. Le pagine si caricano man mano che scorri.</figcaption>
+      </figure>
+
+      <figure class="media">
+        <img src="img/15-viste-sorgente.png" alt="La testata della colonna di sinistra con il nome del file e le due viste">
+        <figcaption>Comparsa la testata: il <b>nome del file</b> aperto, e due viste —
+        «Anteprima PDF» (quella iniziale) e «Testo», cioè le parole che l'app ha
+        effettivamente letto dentro il documento.</figcaption>
+      </figure>
+
+      <div class="callout">
+        <div class="ch">Consiglio</div>
+        <p>Dai sempre un'occhiata alla vista <b>Testo</b> prima di anonimizzare: quello,
+        e solo quello, è ciò che il modello leggerà.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="zoom">
+      <h2 data-n="06">Ingrandire per leggere</h2>
+
+      <figure class="media">
+        <img src="img/16-zoom-barra.png" alt="I comandi dello zoom: meno, livello percentuale, più">
+        <figcaption>I tre comandi dello zoom, accanto al nome del file.</figcaption>
+      </figure>
+
+      <ul>
+        <li><b>−</b> e <b>+</b> vanno a passi;</li>
+        <li>il numero in mezzo (<b>100%</b>) riporta tutto alla larghezza della colonna
+          con un click;</li>
+        <li><b>ctrl</b> (o <b>⌘</b>) <b>+ rotella</b> — cioè il <b>pinch</b> del trackpad —
+          ingrandisce nel punto dove tieni il puntatore;</li>
+        <li><b>doppio click</b> sulla pagina: 100% ⇄ 200%.</li>
+      </ul>
+
+      <figure>
+        <img src="img/17-zoom-200.png" alt="Il documento al 200 per cento">
+        <figcaption>Al 200%. Lo zoom vale per <b>entrambe</b> le colonne insieme, e le due
+        anteprime restano appaiate anche scorrendo: stai guardando lo stesso punto del
+        documento prima e dopo la censura.</figcaption>
+      </figure>
+
+      <div class="callout fonte">
+        <div class="ch">Dettaglio tecnico</div>
+        <p>Oltre a 1,5× le pagine che stai guardando vengono richieste a risoluzione
+        maggiore, così il testo non sgrana. Lo zoom va da <b>100%</b> a <b>300%</b>:
+        sotto il 100% non si scende.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="riquadri">
+      <h2 data-n="07">Firme e timbri: i riquadri manuali</h2>
+
+      <div class="callout eli5">
+        <div class="ch">Perché servono</div>
+        <p>Una firma non è testo: è un disegno. Un timbro nemmeno. <b>Nessun modello li
+        legge</b>, quindi nessun modello può cancellarli. Glieli devi indicare tu.</p>
+      </div>
+
+      <figure class="media">
+        <img src="img/18-riquadri-modo.png" alt="Il bottone Riquadri attivo, in giallo">
+        <figcaption>Click su <b>✏️ Riquadri</b>: il bottone si accende e l'anteprima entra
+        in modalità disegno (compare anche un messaggio che ti dice come fare).</figcaption>
+      </figure>
+
+      <ol class="passi">
+        <li>Premi <b>✏️ Riquadri</b>.</li>
+        <li>Trascina il mouse sopra la firma o il timbro: nasce un rettangolo giallo.</li>
+        <li>Sbagliato? <b>Clicca il rettangolo</b> e sparisce.</li>
+        <li>Il numero accanto al bottone conta quanti ne hai messi.</li>
+      </ol>
+
+      <figure class="media">
+        <img src="img/19-riquadro-firma.png" alt="Un riquadro giallo disegnato sopra la firma e il timbro">
+        <figcaption>Un riquadro sopra la firma e il timbro. Nel PDF finale, lì sotto i
+        <b>pixel vengono cancellati</b> davvero — non ci si disegna sopra un rettangolo nero
+        che si può togliere.</figcaption>
+      </figure>
+
+      <div class="callout attenzione">
+        <div class="ch">Due limiti onesti</div>
+        <p>I riquadri si possono disegnare <b>solo su un PDF</b> (non sul testo incollato),
+        e vivono con quel documento: se carichi un altro file, ricominci. In compenso, con
+        almeno un riquadro il PDF si scarica <b>anche se non è stata trovata nessuna PII
+        testuale</b> — è il caso della scansione con la sola firma.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="censurato">
+      <h2 data-n="08">Il PDF censurato</h2>
+
+      <p>Terza vista a destra: <b>PDF censurato</b>. L'app prende il tuo documento, gli
+      toglie i dati personali <b>dal contenuto del file</b> e te lo rimostra impaginato
+      come prima.</p>
+
+      <figure>
+        <img src="img/20-pdf-censurato.png" alt="Il PDF censurato nella colonna di destra, con i placeholder al posto delle PII e il riquadro manuale annerito">
+        <figcaption>A destra il documento redatto: al posto dei dati ci sono i segnaposto, e
+        dove avevi messo il riquadro non c'è più niente.</figcaption>
+      </figure>
+
+      <figure>
+        <img src="img/21-prima-dopo.png" alt="Le due colonne appaiate: originale a sinistra, censurato a destra">
+        <figcaption>Prima e dopo, appaiati. Scorri una colonna e l'altra la segue.</figcaption>
+      </figure>
+
+      <h3 id="avviso-residui">Quando l'app ti avvisa</h3>
+      <figure class="media">
+        <img src="img/38-avviso-residui.png" alt="Il messaggio di avviso: alcuni valori sono rimasti in chiaro">
+        <figcaption>Un messaggio che va letto, non chiuso in fretta.</figcaption>
+      </figure>
+
+      <p>Due casi in cui un valore resta leggibile, e in tutti e due l'app te lo dice
+      invece di consegnarti un file che <i>sembra</i> anonimo:</p>
+      <ul>
+        <li><b>residui</b> — l'app rilegge il documento che ha appena prodotto e trova che
+          un valore è ancora lì;</li>
+        <li><b>saltati</b> — valori troppo corti (meno di due caratteri, o due sole cifre
+          come «45»): cercarli nel documento devasterebbe tutto il resto.</li>
+      </ul>
+
+      <div class="callout">
+        <div class="ch">Cosa fa il PDF oltre al testo</div>
+        <p>Vengono ripuliti anche i <b>metadati</b>, il contenuto delle <b>annotazioni</b>,
+        i <b>campi modulo</b> e i titoli dei <b>segnalibri</b>; gli <b>allegati incorporati</b>
+        vengono rimossi. Sono tutti posti in cui un dato personale sopravvive a una
+        cancellatura fatta male.</p>
+      </div>
+
+      <div class="callout fonte">
+        <div class="ch">Il dizionario non viaggia</div>
+        <p>Per costruire il PDF il computer ha bisogno della corrispondenza etichetta →
+        valore, ma <b>non</b> gliela manda il browser: la ricostruisce sul momento e la
+        butta appena finito. Per questo il bottone funziona identico anche con lo switch
+        <b>Dizionario reversibile</b> spento.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="ocr">
+      <h2 data-n="09">Scansioni e fotografie: l'OCR</h2>
+
+      <p>Se il PDF è una <b>fotografia</b> del documento, dentro non ci sono parole: ci
+      sono pixel. L'app se ne accorge da sola e passa dal riconoscimento ottico dei
+      caratteri (OCR).</p>
+
+      <figure>
+        <img src="img/22-ocr-testo.png" alt="La vista Testo di una scansione: il testo letto dall'OCR">
+        <figcaption>La vista <b>Testo</b> di una scansione: queste parole non erano nel file,
+        le ha lette l'OCR guardando l'immagine. Guarda bene — «Gorso Venezia», «Milano ?»:
+        <b>l'OCR sbaglia</b>, e ciò che legge male il modello non può nasconderlo.</figcaption>
+      </figure>
+
+      <figure>
+        <img src="img/23-ocr-risultato.png" alt="La scansione anonimizzata: le PII trovate anche nell'immagine">
+        <figcaption>La stessa scansione, anonimizzata: nomi, codice fiscale, IBAN e importi
+        sono stati trovati lo stesso.</figcaption>
+      </figure>
+
+      <ul>
+        <li>Funziona in tre modi, decisi pagina per pagina: solo testo (nessun OCR),
+          <b>scansione</b> (tutto OCR), <b>ibrida</b> — la carta intestata è un'immagine
+          incollata su una pagina normale, e viene letta anche quella.</li>
+        <li>Sulla pagina redatta viene riscritto un <b>livello di testo invisibile</b>: il
+          PDF che scarichi resta <b>ricercabile</b>, ma le parole che erano dati personali
+          non ci finiscono dentro.</li>
+        <li>Il controllo dei residui <b>ri-legge con l'OCR</b> le pagine toccate. Senza
+          questo, su una scansione l'app direbbe sempre «zero residui» — e sarebbe una bugia.</li>
+      </ul>
+
+      <div class="callout attenzione">
+        <div class="ch">Se l'OCR non è disponibile</div>
+        <p>All'OCR servono dei file di lingua installati. Se mancano, un PDF fotografato
+        <b>non può essere redatto</b>: l'app te lo dice al momento, con l'istruzione per
+        abilitarlo, invece di restituirti il file intatto. Non c'è una spia dell'OCR in
+        nessuna schermata: se la scansione si anonimizza, l'OCR c'è.</p>
+      </div>
+
+      <div class="callout attenzione">
+        <div class="ch">Quello che l'OCR legge male</div>
+        <p>Scritte <b>verticali</b> e sigle <b>a margine</b> (protocolli, numeri laterali).
+        Lì la strada giusta è il riquadro manuale.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="tag">
+      <h2 data-n="10">Scegliere che cosa nascondere</h2>
+
+      <p>L'icona <b>🏷️</b> nella testata apre l'elenco dei <b>23 tipi</b> di dato che
+      l'app conosce, con la descrizione e un esempio di ciascuno.</p>
+
+      <figure>
+        <img src="img/24-tag-modale.png" alt="La finestra Tag da anonimizzare">
+        <figcaption>«Tag da anonimizzare»: 23 righe, una per tipo di dato.</figcaption>
+      </figure>
+
+      <figure class="media">
+        <img src="img/25-tag-riga.png" alt="Primo piano di alcune righe dei tag con la spunta">
+        <figcaption>La spunta accesa vuol dire «sostituiscilo». <b>Togliendo la spunta il
+        dato viene comunque trovato, ma lasciato in chiaro</b>: serve, per esempio, a
+        confrontare gli importi, o a tenere età e sesso in una relazione clinica.</figcaption>
+      </figure>
+
+      <h3 id="termini">📌 I Termini personali</h3>
+      <p>In fondo alla stessa finestra c'è la parte più utile per uno studio: la lista dei
+      valori che vuoi <b>sempre</b> nascosti, anche se nessun modello li riconoscerebbe —
+      il nome del tuo studio, il nome in codice di una pratica, una sigla interna.</p>
+
+      <figure class="media">
+        <img src="img/26-termini-personali.png" alt="La sezione Termini personali con un termine aggiunto">
+        <figcaption>Scrivi il valore, scegli il tag (uno dei 23, oppure uno nuovo inventato
+        da te) e premi <b>Aggiungi</b>. Poi <b>💾 Salva</b>.</figcaption>
+      </figure>
+
+      <ul>
+        <li>Il confronto è <b>letterale</b> e rispetta i confini di parola: «Elvetico» non
+          scatta dentro un'altra parola.</li>
+        <li>Un termine personale ha la <b>precedenza su tutto</b>, modello compreso.</li>
+        <li>Servono almeno 3 caratteri; il tag va da 2 a 20 fra lettere, cifre e <code>_</code>.</li>
+      </ul>
+
+      <div class="callout no">
+        <div class="ch">Unica cosa che resta su disco</div>
+        <p>I Termini personali sono <b>salvati in chiaro</b> nel file delle preferenze di
+        questo computer (<code>prefs.json</code>). È voluto — sono i valori che hai chiesto
+        di rilevare sempre — ma ricordatene se il computer cambia mani.</p>
+      </div>
+
+      <p>Le due scelte (tag esclusi e termini) restano anche dopo aver chiuso l'app, e
+      valgono anche per chi usa AnonimAI da programma. <b>Annulla</b> chiude senza salvare.</p>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="dizionario">
+      <h2 data-n="11">Il dizionario reversibile: la chiave</h2>
+
+      <figure class="media">
+        <img src="img/27-switch-dizionario.png" alt="Lo switch Dizionario reversibile su ATTIVO">
+        <figcaption>Acceso (<b>ATTIVO</b>): ogni dato riceve un ID, e potrai ripristinare i
+        valori veri dalla risposta dell'AI.</figcaption>
+      </figure>
+
+      <figure class="media">
+        <img src="img/28-dizionario-off.png" alt="Lo switch su DISATTIVO, in ambra, e la tabella senza valori">
+        <figcaption>Spento (<b>DISATTIVO</b>, in ambra): <b>nessuna chiave viene creata</b>.
+        Non è una questione estetica — la corrispondenza non nasce, non viene salvata, non
+        è scaricabile, e non è nemmeno nascosta dentro la risposta. Il ritorno indietro
+        diventa impossibile <b>per tutti</b>.</figcaption>
+      </figure>
+
+      <p>La numerazione resta anche da spento: due volte <code>[FULLNAME_1]</code> vogliono
+      dire la stessa persona. Serve all'AI per ragionare, e da sola non riporta al nome.</p>
+
+      <div class="callout fonte">
+        <div class="ch">La differenza che conta per il GDPR</div>
+        <p>Con il dizionario <b>acceso</b> quella che hai in mano è una
+        <b>pseudonimizzazione</b>: finché il dizionario esiste, per la legge resta dato
+        personale. Con il dizionario <b>spento</b> l'anonimizzazione è <b>definitiva</b>.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="deanonimizza">
+      <h2 data-n="12">Rimettere i valori veri</h2>
+
+      <p>Hai incollato il testo anonimo in ChatGPT, ti ha risposto, e la risposta è piena
+      di <code>[FULLNAME_1]</code>. Ora torni qui.</p>
+
+      <figure>
+        <img src="img/29-deanonimizza.png" alt="La modalità Deanonimizza, con la risposta dell'AI incollata a sinistra">
+        <figcaption>Si cambia modalità <b>cliccando il 🕵️ in alto a sinistra</b>. Non ci
+        sono linguette: l'etichetta nella testata diventa «AnonimAI — Deanonimizza».</figcaption>
+      </figure>
+
+      <ol class="passi">
+        <li>Incolla la risposta dell'AI nel riquadro di sinistra.</li>
+        <li>Premi <b>🔓 Ripristina valori</b>.</li>
+        <li>A destra compare il testo con i nomi veri; <b>📋 Copia testo ripristinato</b>
+          te lo mette negli appunti.</li>
+      </ol>
+
+      <figure>
+        <img src="img/30-ripristinato.png" alt="Il testo ripristinato con i valori veri">
+        <figcaption>Le etichette sono tornate nomi, importi e IBAN.</figcaption>
+      </figure>
+
+      <ul>
+        <li>Se hai <b>chiuso e riaperto</b> l'app, usa <b>📁 Carica dizionario</b> e scegli
+          il <code>.json</code> che avevi salvato.</li>
+        <li>Il ripristino è tollerante: funziona anche se l'AI ha scritto
+          <code>**[IBAN_1]**</code> in grassetto o ha tolto le parentesi quadre.</li>
+        <li><b>Pulisci</b>, nella schermata Anonimizza, cancella il dizionario della
+          sessione: da lì in poi serve il file salvato.</li>
+      </ul>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="impostazioni">
+      <h2 data-n="13">Le Impostazioni (⚙️)</h2>
+
+      <div class="griglia2">
+        <figure>
+          <img src="img/31-set-server.png" alt="Impostazioni, scheda Server">
+          <figcaption><b>Server</b> — indirizzo e porta. Serve solo se la porta 5005 è già
+          occupata da un altro programma: cambiala, <b>Verifica porta</b> ti dice subito se
+          quella nuova è libera. Le modifiche valgono <b>dal prossimo avvio</b>.</figcaption>
+        </figure>
+        <figure>
+          <img src="img/32-set-come.png" alt="Impostazioni, scheda Come funziona">
+          <figcaption><b>Come funziona</b> — che cosa fa l'app, perché i dati non escono,
+          come trova i dati personali, e che cosa <b>non</b> ti promette.</figcaption>
+        </figure>
+        <figure>
+          <img src="img/33-set-sicurezza.png" alt="Impostazioni, scheda Sicurezza">
+          <figcaption><b>Sicurezza</b> — la scheda da leggere prima di condividere il primo
+          documento vero. Da qui viene metà di questa guida.</figcaption>
+        </figure>
+        <figure>
+          <img src="img/34-set-crediti.png" alt="Impostazioni, scheda Crediti">
+          <figcaption><b>Crediti</b> — il progetto originale, i pesi del modello, il dataset
+          e le licenze. Il modello indicato è <b>quello che sta davvero girando</b>, letto
+          dall'app all'apertura della finestra.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="dettagli">
+      <h2 data-n="14">Tema, lingua, avviso</h2>
+
+      <figure>
+        <img src="img/35-tema-scuro.png" alt="AnonimAI in tema scuro">
+        <figcaption>Il tema scuro (☀️/🌙). Anche i colori dei tag hanno la loro versione
+        scura: restano distinguibili.</figcaption>
+      </figure>
+
+      <figure>
+        <img src="img/36-lingua-en.png" alt="L'interfaccia in inglese">
+        <figcaption>L'interfaccia in inglese. I <b>nomi dei tag</b> restano gli stessi
+        (<code>FULLNAME</code>, <code>IBAN</code>…): cambiano le spiegazioni, non le etichette.</figcaption>
+      </figure>
+
+      <figure class="media">
+        <img src="img/37-avviso.png" alt="L'avviso Versione in sviluppo aperto">
+        <figcaption>L'avviso ⚠️: si apre con un <b>click</b> (non passandoci sopra) e si
+        chiude cliccando altrove o con <kbd>Esc</kbd>.</figcaption>
+      </figure>
+
+      <h3 id="tastiera">Tasti</h3>
+      <div class="tabwrap">
+      <table>
+        <thead><tr><th>Tasto / gesto</th><th>Effetto</th></tr></thead>
+        <tbody>
+          <tr><td><kbd>Esc</kbd></td><td>chiude l'avviso, le Impostazioni, i Tag</td></tr>
+          <tr><td><kbd>ctrl</kbd>/<kbd>⌘</kbd> + rotella, o pinch</td><td>zoom sull'anteprima, nel punto del puntatore</td></tr>
+          <tr><td>doppio click sull'anteprima</td><td>100% ⇄ 200% (non in modalità Riquadri)</td></tr>
+          <tr><td><kbd>Invio</kbd> nei campi dei Termini personali</td><td>aggiunge il termine</td></tr>
+          <tr><td>click su un tipo nella legenda</td><td>lo spegne o riaccende nell'anteprima</td></tr>
+        </tbody>
+      </table>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="disco">
+      <h2 data-n="15">Dove finiscono le tue cose</h2>
+
+      <p>Vale la pena saperlo con precisione, perché è l'unica risposta onesta alla
+      domanda «ma dove va a finire il mio documento?».</p>
+
+      <div class="tabwrap">
+      <table>
+        <thead><tr><th>Cosa</th><th>Dove sta</th><th>Quanto vive</th></tr></thead>
+        <tbody>
+          <tr><td>il documento che carichi</td><td><b>in memoria</b>, mai su disco</td>
+              <td>muore chiudendo l'app; ne restano al massimo <b>6</b>, poi cade il più vecchio</td></tr>
+          <tr><td>il dizionario della sessione</td><td>nel browser dell'app</td>
+              <td>fino a <b>Pulisci</b> o finché non ne nasce uno nuovo</td></tr>
+          <tr><td>il dizionario che scarichi tu</td><td>dove lo salvi</td><td>per sempre: è tuo, e va custodito</td></tr>
+          <tr><td>tag esclusi, switch del dizionario, Termini personali</td>
+              <td><code>prefs.json</code> nella cartella dati dell'app</td><td>finché non li cambi</td></tr>
+          <tr><td>indirizzo e porta</td><td><code>config.json</code>, stessa cartella</td><td>finché non li cambi</td></tr>
+        </tbody>
+      </table>
+      </div>
+
+      <pre class="albero"><b>macOS</b>    ~/Library/Application Support/anonimai/   <i>config.json · prefs.json</i>
+          ~/anonimai/backend.log                    <i>il diario dell'app, se l'hai avviata come programma</i>
+<b>Windows</b>  %LOCALAPPDATA%\anonimai\                  <i>config.json · prefs.json · backend.log</i>
+<b>Linux</b>    ~/.local/share/anonimai/                  <i>config.json · prefs.json</i>
+          ~/anonimai/backend.log</pre>
+
+      <p>Se un documento è rimasto aperto troppo a lungo e nel frattempo ne hai caricati
+      altri, l'anteprima ti avvisa: «Documento non più in memoria: ricaricalo per rivedere
+      le pagine». Non è un errore, è la memoria che si è liberata.</p>
+
+      <div class="callout fonte">
+        <div class="ch">La rete</div>
+        <p>Il server sta in ascolto su <code>127.0.0.1</code>: solo questo computer. Anche
+        volendo esporlo fuori, l'app <b>non chiama nessuno</b>: nessuna API, nessuna
+        telemetria, nessun font o libreria scaricati da internet.</p>
+      </div>
+    </section>
+
+    <!-- ============================================================ -->
+    <section class="cap" id="non-esiste">
+      <h2 data-n="16">Che cosa NON esiste</h2>
+
+      <p>Per non farti cercare cose che non ci sono.</p>
+
+      <ul>
+        <li><b>Non c'è un modo per aggiungere a mano una PII</b> nel testo: se il modello
+          salta un nome, gli strumenti sono i <b>Termini personali</b> (per un valore che
+          ricorre) o il <b>riquadro manuale</b> nel PDF.</li>
+        <li><b>Non c'è una cronologia</b> dei documenti: nessun elenco dei file passati,
+          nessuna cartella di lavoro.</li>
+        <li><b>Non c'è account, login, sincronizzazione, aggiornamento automatico.</b></li>
+        <li><b>Non si deanonimizza un PDF</b>: la modalità Deanonimizza lavora solo sul
+          testo che incolli.</li>
+        <li><b>Non si trascina un file in modalità Deanonimizza</b>: il velo compare solo
+          in Anonimizza.</li>
+        <li><b>Non si carica il dizionario dalla schermata Anonimizza</b>: il bottone
+          <b>📁 Carica dizionario</b> vive solo in Deanonimizza.</li>
+        <li><b>L'anteprima non è un lettore PDF</b>: sono immagini delle pagine, quindi non
+          si seleziona il testo e non c'è una ricerca dentro il documento.</li>
+        <li><b>Non c'è un annulla</b> generale: un riquadro si toglie cliccandolo, un tag si
+          rimette spuntandolo, il resto si rifà con <b>Pulisci</b>.</li>
+        <li><b>Non c'è un bottone «stampa»</b>: si scarica il PDF e si stampa da lì.</li>
+        <li><b>Non c'è nessuna barra di avanzamento</b> con le percentuali: quando l'app sta
+          lavorando te lo dice il bottone stesso, che gira.</li>
+      </ul>
+
+      <div class="callout eli5">
+        <div class="ch">La regola d'oro</div>
+        <p>Nel dubbio, <b>scarica il PDF anonimo e rileggilo</b>. È l'unico formato che
+        protegge anche ciò che non è testo, ed è l'unico che ti avvisa quando qualcosa non
+        è riuscito a nascondere.</p>
+      </div>
+    </section>
+
+    <footer>
+      Guida ad AnonimAI v2.0.0 · schermate scattate sull'app in funzione ·
+      icone <a href="https://openmoji.org" target="_blank" rel="noopener">OpenMoji</a> (CC BY-SA 4.0) ·
+      <a href="https://github.com/Rizzo-AI-Academy/rizzo-pii" target="_blank" rel="noopener">repository del progetto</a>
+    </footer>
+
+  </article>
+  </main>
+</div>
+
+<div id="lb" role="dialog" aria-modal="true" aria-label="Immagine ingrandita">
+  <button class="lbx" aria-label="Chiudi">✕</button>
+  <button class="lbp" aria-label="Precedente">‹</button>
+  <button class="lbn" aria-label="Successiva">›</button>
+  <img alt="">
+  <figcaption></figcaption>
+</div>
+
+<script src="assets/guida.js?v=1"></script>
+</body>
+</html>
