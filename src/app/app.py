@@ -950,13 +950,39 @@ html[data-theme="scuro"] #thTog .mo{opacity:1}
 .card{background:var(--panel);border:0;display:flex;
       flex-direction:column;overflow:hidden;min-height:0}
 .workspace > .card + .card,.grid > .card + .card{border-left:1px solid var(--line)}
-/* la testata di ogni riquadro E' una .tbar (skill §5bis) */
-.card .hd{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;flex:none;
-          min-height:var(--tb-bar-h);padding:.15rem .5rem .15rem .95rem;
-          border-bottom:1px solid var(--line)}
+/* la testata di ogni riquadro E' una .tbar (skill §5bis) e sta SEMPRE su una
+   riga: niente wrap — cedono gli elementi elastici (nome file, hint) in
+   ellipsis, e sotto una certa larghezza della COLONNA (@container, non @media:
+   la colonna e' meta' finestra) i comandi perdono prima le etichette a parole,
+   poi i rientri. Nessun comando se ne va davvero. */
+.card .hd{display:flex;align-items:center;gap:.5rem;flex-wrap:nowrap;flex:none;
+          height:var(--tb-bar-h);padding:0 .5rem 0 .95rem;overflow:hidden;
+          border-bottom:1px solid var(--line);container-type:inline-size}
 .card .hd h2{font-size:11px;margin:0;text-transform:uppercase;letter-spacing:.14em;
-             color:var(--muted);font-weight:700}
-.card .hd .right{margin-left:auto;display:flex;gap:.1rem;align-items:center}
+             color:var(--muted);font-weight:700;white-space:nowrap;flex:none}
+.card .hd .right{margin-left:auto;display:flex;gap:.1rem;align-items:center;
+                 flex:none;min-width:0}
+/* gli elastici: si accorciano loro, mai i comandi */
+.card .hd .tbnota,.card .hd .hint{flex:0 1 auto;min-width:0;overflow:hidden;
+                 text-overflow:ellipsis;white-space:nowrap}
+.card .hd .right .hint{flex:0 1 auto}
+.seg-tabs button,#boxBtn{white-space:nowrap}
+/* colonna stretta: via l'etichetta di Riquadri (resta ✏️ + contatore)... */
+@container (max-width: 640px){
+  .card .hd .hint{display:none}
+  #boxBtn [data-i18n]{display:none}
+  .card .hd #boxBtn{min-width:var(--tb-min);padding:0 .3rem}
+}
+/* ...piu' stretta ancora: rientri e zoom ridotti (specificita' >= delle
+   regole base, che nel foglio vengono DOPO e a parita' vincerebbero) */
+@container (max-width: 520px){
+  .card .hd .seg-tabs button{padding:0 .38rem;letter-spacing:.03em}
+  .card .hd .zoomg .lvl{min-width:38px}
+  .card .hd .zoomg button{min-width:22px;padding:0 .25rem}
+  /* ultimo a cedere: il titolo si tronca, i comandi restano interi */
+  .card .hd h2{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;
+         letter-spacing:.07em}
+}
 .card .bd{padding:14px 16px;flex:1;min-height:0;display:flex;flex-direction:column}
 
 /* comandi di testata: stessi vestiti dei .tbtn */
@@ -1353,9 +1379,9 @@ tr:hover td{background:var(--hover)}
           <textarea class="mono" id="anon" style="display:none" readonly
                     data-i18n-ph="anon_ph" placeholder="Il testo anonimizzato apparirà qui."></textarea>
           <div class="row">
-            <span class="htip"><button class="btn" id="copy">📋 <span data-i18n="copy">Copia per ChatGPT</span></button>
+            <span class="htip"><button class="btn" id="copy">📋 <span data-i18n="copy">Copia testo</span></button>
               <span class="tip" data-i18n="tip_copy"></span></span>
-            <span class="htip"><button class="ghost" id="dlpdf">📄 <span data-i18n="dlpdf">Scarica PDF anonimizzato</span></button>
+            <span class="htip"><button class="ghost" id="dlpdf">⬇️ <span data-i18n="dlpdf">PDF anonimo</span></button>
               <span class="tip" data-i18n="tip_pdf"></span></span>
             <span class="htip"><button class="ghost" id="dl">⬇️ <span data-i18n="dl">Scarica dizionario</span></button>
               <span class="tip" data-i18n="tip_dict"></span></span>
@@ -1529,7 +1555,7 @@ const T = {
   t_pdf_render:"Genero il PDF anonimizzato…",
   empty_prev:"L'anteprima con le PII evidenziate apparirà qui.",
   anon_ph:"Il testo anonimizzato apparirà qui.",
-  copy:"Copia per ChatGPT", dl:"Scarica dizionario", dlpdf:"Scarica PDF anonimizzato",
+  copy:"Copia testo", dl:"Scarica dizionario", dlpdf:"PDF anonimo",
   t_pdf_making:"Genero il PDF…", t_pdf_ok:"PDF anonimizzato scaricato",
   t_pdf_err:"Errore nella creazione del PDF",
   t_pdf_warn:(r,s)=>"PDF scaricato · ATTENZIONE: "+(r+s)+" valori sono rimasti in chiaro"
@@ -1559,7 +1585,7 @@ const T = {
   chars:n=>n.toLocaleString('it'),
   set_title:"Impostazioni", set_tab_server:"Server", set_tab_how:"Come funziona",
   set_tab_sec:"Sicurezza", set_tab_cred:"Crediti", cfg_close:"Chiudi",
-  sec_body:"<h4>Prima di condividere</h4><ul><li><b>Rileggi sempre l'output.</b> Il modello può sbagliare: un nome fuori posto, una sigla scambiata per un'altra cosa. La rilettura è tua, non delegabile.</li><li><b>Se l'app ti avvisa, fermati.</b> Dopo il PDF può comparire «N valori sono rimasti in chiaro»: sono i <b>residui</b> (ancora leggibili nell'output) e i <b>saltati</b> (frammenti troppo corti per essere cercati senza devastare il documento). Vai a vederli.</li><li><b>Controlla i tag attivi</b> (🏷️): i tipi che deselezioni vengono rilevati ma <b>lasciati in chiaro</b> apposta. È una scelta tua, ma va ricordata prima di mandare fuori il file.</li></ul><h4>Il dizionario è la chiave</h4><ul><li>Il file <code>dizionario_anonimizzazione.json</code> contiene <b>tutte le PII in chiaro</b>. Chi ce l'ha può deanonimizzare qualsiasi cosa: <b>vale quanto il documento originale</b>.</li><li><b>Non allegarlo mai insieme</b> al documento anonimizzato, non metterlo nella stessa cartella condivisa, non incollarlo in un LLM.</li><li>Finché il dizionario esiste, quella che hai è una <b>pseudonimizzazione</b>: per il GDPR resta dato personale. Vuoi un'anonimizzazione <b>definitiva</b>? Spegni lo switch: nessuna chiave viene creata e il ripristino diventa impossibile, per tutti.</li><li>Il dizionario della sessione vive nel browser: <b>Pulisci</b> lo cancella. I documenti stanno in memoria e muoiono con l'app: sul disco non resta niente.</li></ul><h4>Quello che il testo non copre</h4><ul><li><b>Firme, timbri, loghi</b>: non sono testo, nessun modello li legge. Coprili con i <b>riquadri manuali</b> (✏️) — sotto il riquadro i pixel vengono cancellati davvero.</li><li><b>Scansioni e foto</b>: servono i file OCR. Se nella scheda Server l'OCR non risulta attivo, un PDF fotografato non può essere redatto — e l'app lo dice invece di consegnarti un file intatto.</li><li><b>Scritte verticali e a margine</b> (protocolli, sigle laterali): l'OCR le prende male. Riquadro manuale.</li></ul><h4>Quale bottone, quando</h4><ul><li><b>Copia per ChatGPT</b> → per <i>conversare</i> col modello e poi ripristinare la risposta. Non porta con sé layout, firme, immagini.</li><li><b>Scarica PDF anonimizzato</b> → per <i>consegnare o caricare il documento</i>. È l'unico che protegge anche ciò che non è testo.</li><li>Nel dubbio: <b>PDF</b>, e rileggilo.</li></ul><h4>Rete</h4><ul><li>Il server ascolta su <code>127.0.0.1</code>: solo questo computer. Se lo esponi (<code>--host 0.0.0.0</code>, Docker su un server d'ufficio) chiunque nella rete può usarlo, e i documenti degli altri passano da lì: mettilo dietro a un accesso controllato.</li><li>Anche esposto, l'app non chiama nessuno: nessuna API, nessuna telemetria. Ciò che entra non esce.</li></ul>",
+  sec_body:"<h4>Prima di condividere</h4><ul><li><b>Rileggi sempre l'output.</b> Il modello può sbagliare: un nome fuori posto, una sigla scambiata per un'altra cosa. La rilettura è tua, non delegabile.</li><li><b>Se l'app ti avvisa, fermati.</b> Dopo il PDF può comparire «N valori sono rimasti in chiaro»: sono i <b>residui</b> (ancora leggibili nell'output) e i <b>saltati</b> (frammenti troppo corti per essere cercati senza devastare il documento). Vai a vederli.</li><li><b>Controlla i tag attivi</b> (🏷️): i tipi che deselezioni vengono rilevati ma <b>lasciati in chiaro</b> apposta. È una scelta tua, ma va ricordata prima di mandare fuori il file.</li></ul><h4>Il dizionario è la chiave</h4><ul><li>Il file <code>dizionario_anonimizzazione.json</code> contiene <b>tutte le PII in chiaro</b>. Chi ce l'ha può deanonimizzare qualsiasi cosa: <b>vale quanto il documento originale</b>.</li><li><b>Non allegarlo mai insieme</b> al documento anonimizzato, non metterlo nella stessa cartella condivisa, non incollarlo in un LLM.</li><li>Finché il dizionario esiste, quella che hai è una <b>pseudonimizzazione</b>: per il GDPR resta dato personale. Vuoi un'anonimizzazione <b>definitiva</b>? Spegni lo switch: nessuna chiave viene creata e il ripristino diventa impossibile, per tutti.</li><li>Il dizionario della sessione vive nel browser: <b>Pulisci</b> lo cancella. I documenti stanno in memoria e muoiono con l'app: sul disco non resta niente.</li></ul><h4>Quello che il testo non copre</h4><ul><li><b>Firme, timbri, loghi</b>: non sono testo, nessun modello li legge. Coprili con i <b>riquadri manuali</b> (✏️) — sotto il riquadro i pixel vengono cancellati davvero.</li><li><b>Scansioni e foto</b>: servono i file OCR. Se nella scheda Server l'OCR non risulta attivo, un PDF fotografato non può essere redatto — e l'app lo dice invece di consegnarti un file intatto.</li><li><b>Scritte verticali e a margine</b> (protocolli, sigle laterali): l'OCR le prende male. Riquadro manuale.</li></ul><h4>Quale bottone, quando</h4><ul><li><b>Copia testo</b> → per <i>conversare</i> col modello e poi ripristinare la risposta. Non porta con sé layout, firme, immagini.</li><li><b>PDF anonimo</b> → per <i>consegnare o caricare il documento</i>. È l'unico che protegge anche ciò che non è testo.</li><li>Nel dubbio: <b>PDF</b>, e rileggilo.</li></ul><h4>Rete</h4><ul><li>Il server ascolta su <code>127.0.0.1</code>: solo questo computer. Se lo esponi (<code>--host 0.0.0.0</code>, Docker su un server d'ufficio) chiunque nella rete può usarlo, e i documenti degli altri passano da lì: mettilo dietro a un accesso controllato.</li><li>Anche esposto, l'app non chiama nessuno: nessuna API, nessuna telemetria. Ciò che entra non esce.</li></ul>",
   tip_copy:"<b>Testo anonimizzato negli appunti.</b> Incollalo nella chat: la risposta che torna contiene i placeholder e in modalità <b>Deanonimizza</b> ridiventa leggibile. Non porta con sé impaginazione, firme e immagini — per quelle serve il PDF.",
   tip_pdf:"<b>Il documento vero, redatto.</b> Layout intatto, PII rimosse dal contenuto del file, pixel cancellati sotto i riquadri manuali, metadati e allegati ripuliti. È la scelta giusta per caricare o consegnare il file. <span class=\"warn\">Rileggilo prima di condividerlo:</span> se qualcosa resta in chiaro l'app te lo dice.",
   tip_dict:"<span class=\"warn\">🔒 Contiene tutte le PII in chiaro.</span> È la chiave che deanonimizza: vale quanto il documento originale. Serve a ripristinare in una sessione futura. Tienilo separato dal documento anonimizzato, non allegarlo mai insieme e non incollarlo in un LLM.",
@@ -1606,7 +1632,7 @@ const T = {
   t_pdf_render:"Building the anonymized PDF…",
   empty_prev:"The preview with highlighted PII will appear here.",
   anon_ph:"The anonymized text will appear here.",
-  copy:"Copy for ChatGPT", dl:"Download dictionary", dlpdf:"Download anonymized PDF",
+  copy:"Copy text", dl:"Download dictionary", dlpdf:"Anonymized PDF",
   t_pdf_making:"Building the PDF…", t_pdf_ok:"Anonymized PDF downloaded",
   t_pdf_err:"Error while creating the PDF",
   t_pdf_warn:(r,s)=>"PDF downloaded · WARNING: "+(r+s)+" values were left in clear"
@@ -1636,7 +1662,7 @@ const T = {
   chars:n=>n.toLocaleString('en'),
   set_title:"Settings", set_tab_server:"Server", set_tab_how:"How it works",
   set_tab_sec:"Security", set_tab_cred:"Credits", cfg_close:"Close",
-  sec_body:"<h4>Before you share</h4><ul><li><b>Always re-read the output.</b> The model can be wrong: a name missed, an abbreviation mistaken for something else. That check is yours and cannot be delegated.</li><li><b>If the app warns you, stop.</b> After the PDF you may see “N values were left in the clear”: those are <b>residuals</b> (still readable in the output) and <b>skipped</b> values (fragments too short to search for without wrecking the document). Go and look at them.</li><li><b>Check the active tags</b> (🏷️): the types you untick are still detected but <b>left in the clear</b> on purpose. Your choice — worth remembering before the file goes out.</li></ul><h4>The dictionary is the key</h4><ul><li>The file <code>dizionario_anonimizzazione.json</code> holds <b>every PII in the clear</b>. Whoever has it can de-anonymise anything: <b>it is worth as much as the original document</b>.</li><li><b>Never attach it together</b> with the anonymised document, never put it in the same shared folder, never paste it into an LLM.</li><li>As long as the dictionary exists you have <b>pseudonymisation</b>: under the GDPR that is still personal data. Want <b>irreversible</b> anonymisation? Switch the dictionary off: no key is created and restoring becomes impossible, for everyone.</li><li>The session dictionary lives in the browser: <b>Clear</b> deletes it. Documents live in memory and die with the app: nothing is left on disk.</li></ul><h4>What text does not cover</h4><ul><li><b>Signatures, stamps, logos</b>: not text, no model reads them. Cover them with the <b>manual boxes</b> (✏️) — under the box the pixels are actually erased.</li><li><b>Scans and photos</b>: they need the OCR files. If OCR is not active, a photographed PDF cannot be redacted — and the app says so instead of handing you an untouched file.</li><li><b>Vertical and margin writing</b> (protocol stamps, side codes): OCR reads them badly. Use a manual box.</li></ul><h4>Which button, when</h4><ul><li><b>Copy for ChatGPT</b> → to <i>talk</i> to the model and restore its answer afterwards. Carries no layout, signatures or images.</li><li><b>Download anonymized PDF</b> → to <i>hand over or upload the document</i>. The only one that also protects what is not text.</li><li>When in doubt: <b>PDF</b>, and re-read it.</li></ul><h4>Network</h4><ul><li>The server listens on <code>127.0.0.1</code>: this machine only. If you expose it (<code>--host 0.0.0.0</code>, Docker on an office server) anyone on the network can use it and other people's documents go through it: put it behind controlled access.</li><li>Even exposed, the app calls nobody: no API, no telemetry. What comes in does not go out.</li></ul>",
+  sec_body:"<h4>Before you share</h4><ul><li><b>Always re-read the output.</b> The model can be wrong: a name missed, an abbreviation mistaken for something else. That check is yours and cannot be delegated.</li><li><b>If the app warns you, stop.</b> After the PDF you may see “N values were left in the clear”: those are <b>residuals</b> (still readable in the output) and <b>skipped</b> values (fragments too short to search for without wrecking the document). Go and look at them.</li><li><b>Check the active tags</b> (🏷️): the types you untick are still detected but <b>left in the clear</b> on purpose. Your choice — worth remembering before the file goes out.</li></ul><h4>The dictionary is the key</h4><ul><li>The file <code>dizionario_anonimizzazione.json</code> holds <b>every PII in the clear</b>. Whoever has it can de-anonymise anything: <b>it is worth as much as the original document</b>.</li><li><b>Never attach it together</b> with the anonymised document, never put it in the same shared folder, never paste it into an LLM.</li><li>As long as the dictionary exists you have <b>pseudonymisation</b>: under the GDPR that is still personal data. Want <b>irreversible</b> anonymisation? Switch the dictionary off: no key is created and restoring becomes impossible, for everyone.</li><li>The session dictionary lives in the browser: <b>Clear</b> deletes it. Documents live in memory and die with the app: nothing is left on disk.</li></ul><h4>What text does not cover</h4><ul><li><b>Signatures, stamps, logos</b>: not text, no model reads them. Cover them with the <b>manual boxes</b> (✏️) — under the box the pixels are actually erased.</li><li><b>Scans and photos</b>: they need the OCR files. If OCR is not active, a photographed PDF cannot be redacted — and the app says so instead of handing you an untouched file.</li><li><b>Vertical and margin writing</b> (protocol stamps, side codes): OCR reads them badly. Use a manual box.</li></ul><h4>Which button, when</h4><ul><li><b>Copy text</b> → to <i>talk</i> to the model and restore its answer afterwards. Carries no layout, signatures or images.</li><li><b>Anonymized PDF</b> → to <i>hand over or upload the document</i>. The only one that also protects what is not text.</li><li>When in doubt: <b>PDF</b>, and re-read it.</li></ul><h4>Network</h4><ul><li>The server listens on <code>127.0.0.1</code>: this machine only. If you expose it (<code>--host 0.0.0.0</code>, Docker on an office server) anyone on the network can use it and other people's documents go through it: put it behind controlled access.</li><li>Even exposed, the app calls nobody: no API, no telemetry. What comes in does not go out.</li></ul>",
   tip_copy:"<b>Anonymised text in the clipboard.</b> Paste it into the chat: the answer comes back with the placeholders and becomes readable again in <b>De-anonymize</b> mode. It carries no layout, signatures or images — for those you need the PDF.",
   tip_pdf:"<b>The real document, redacted.</b> Layout intact, PII removed from the file's content, pixels erased under the manual boxes, metadata and attachments scrubbed. The right choice to upload or hand over the file. <span class=\"warn\">Re-read it before sharing:</span> if anything is left in the clear the app tells you.",
   tip_dict:"<span class=\"warn\">🔒 It holds every PII in the clear.</span> This is the key that de-anonymises: worth as much as the original document. Use it to restore in a later session. Keep it apart from the anonymised document, never attach them together, never paste it into an LLM.",
