@@ -49,6 +49,12 @@ if not server_config.port_available(HOST, PORT):
 from app import app  # noqa: E402
 
 if __name__ == "__main__":
+    # fork: stesso avviso dell'entry principale. Qui il log finisce in backend.log,
+    # che e' il file indicato all'utente quando il backend muore: se qualcuno espone
+    # il sidecar, la riga resta scritta da qualche parte.
+    if not server_config.is_loopback(HOST) and not server_config.load_auth():
+        print(f"[serve] ATTENZIONE: server esposto su {HOST} SENZA credenziale. "
+              "Chiudilo con PII_AUTH=\"utente:password\".")
     print(f"[serve] avvio server su {HOST}:{PORT}")
     try:
         app.run(host=HOST, port=PORT, threaded=True)

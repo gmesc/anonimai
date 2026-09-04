@@ -30,3 +30,5 @@
 {"note": "tessera assicurato 80756", "text": "tessera n. 80756123456789012345 della cassa malati", "expect": [["ID_DOC", "80756123456789012345"]]}
 {"note": "repertorio notarile (DOCID upstream)", "text": "atto Rep. n. 4521/2024 del notaio", "expect": [["DOCID", "Rep. n. 4521/2024"]]}
 {"note": "data svizzera con punti", "text": "in data 4.9.2026 le parti", "expect": [["DATE", "4.9.2026"]]}
+{"note": "registro di commercio vecchio formato", "text": "La societa\u0300 e\u0300 iscritta con n. CH-020.3.912.345-6 dal 1998.", "expect": [["PIVA", "CH-020.3.912.345-6"]]}
+{"note": "registro di commercio accanto all'IDI, entrambi rilevati", "text": "Ditta Sagl, CHE-105.805.649, gia\u0300 CH-501.3.001.234-5, sede a Bellinzona.", "expect": [["PIVA", "CHE-105.805.649"], ["PIVA", "CH-501.3.001.234-5"]]}

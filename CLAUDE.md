@@ -89,13 +89,21 @@ modelli in `models/<versione>/`, artefatti dei run in `experiments/<run>/`, doc 
   priorità sul modello). `URL` è un **23° tag solo-regex**: il modello non lo conosce; matcha schema,
   `www.` e domini nudi solo su una **lista chiusa di TLD** (senza, `p.iva`/`S.r.l.` diventerebbero
   domini). **Profilo Svizzera** sempre attivo nei tag esistenti: AVS→`ID_DOC` (checksum EAN-13),
-  Cantoni→`PROVINCE`, NAP→`ZIPCODE` (19xx/20xx esclusi: anni), targa CH→`TARGA`, IDI/UID `CHE-…`→`PIVA` (checksum mod-11), telefono `+41`/`091 …`→`TELEPHONENUM`, `CHF`/`Fr.`→`AMOUNT`, `mappale n. … RFD`→`CATASTO`, tessera `80756…`→`ID_DOC` (solo forma). I detector CH stanno **in testa** a `DETECTORS` (sort stabile in `_merge`: vincono i pareggi). Fixture: `tests/fixtures_ticino.jsonl`. Cornice legale in `docs/CONFORMITA-CH.md`. **Termini
+  Cantoni→`PROVINCE`, NAP→`ZIPCODE` (19xx/20xx esclusi: anni), targa CH→`TARGA`, IDI/UID `CHE-…`→`PIVA` (checksum mod-11), telefono `+41`/`091 …`→`TELEPHONENUM`, `CHF`/`Fr.`→`AMOUNT`, `mappale n. … RFD`→`CATASTO`, tessera `80756…`→`ID_DOC` (solo forma). I detector CH stanno **in testa** a `DETECTORS` (sort stabile in `_merge`: vincono i pareggi). n. registro di commercio vecchio formato `CH-020.3.912.345-6`→`PIVA` (solo forma).
+  Fixture: `tests/fixtures_ticino.jsonl`. Cornice legale in `docs/CONFORMITA-CH.md`, quadro per
+  settori in `docs/RAPPORTO-CONFORMITA-SETTORI.md`, modelli da compilare in
+  `docs/MODELLI-DOCUMENTAZIONE.md`. UI: sesta scheda **Buone abitudini** (`habits_body`) e
+  promemoria del blocco schermo (`pii_lock_reminder_off`). **Termini
   personali** (🏷️→📌): lista `{value, tag}` in `prefs.json` (`custom_terms`, cap 200, ≥3
   alfanumerici), match letterale con confini di parola in `detectors.match_custom_terms`,
   priorità massima in `_merge` (source `utente`), tag liberi ammessi; su `/settings` GET/POST. `APP_VERSION`. Endpoint: `GET /health` (readiness senza inference, 200/503),
   `POST /analyze`, `POST /pdf`, `POST /preview`, `POST /pdf/preview`, `GET /doc/<id>/page/<n>.png`,
-  `GET /doc/<id>/file.pdf`, `GET/POST /settings` (alias storico `/tags`), `GET/POST /config`,
-  `GET /port-check`; CLI `--host`/`--port`/`--exclude-tags`/`--no-mapping`.
+  `GET /doc/<id>/file.pdf`, `DELETE /doc/<id>`, `GET/POST /settings` (alias storico `/tags`),
+  `GET/POST /config`, `GET /port-check`; CLI `--host`/`--port`/`--exclude-tags`/`--no-mapping`/`--auth`.
+  **Credenziale** (solo se esposto): `PII_AUTH="utente:password"` o `--auth` → HTTP Basic su tutto
+  tranne `/health`, `/healthz`, `/favicon.ico`, `/assets/*`; parsing/confronto in `server_config.py`
+  (`parse_auth`, `check_basic` con `hmac.compare_digest`, `is_loopback`), mai in `config.json`
+  (inv. 11) né in `prefs.json`. Host non-loopback senza credenziale = avviso all'avvio, non rifiuto.
 - **Anteprima del PDF a video, prima e dopo** — le due colonne mostrano il documento *renderizzato*,
   non solo il testo. A sinistra, appena si carica un PDF: `POST /preview` lo tiene in memoria e
   ritorna testo + numero di pagine, e la card offre due viste (**Anteprima PDF** default, **Testo**).
@@ -111,9 +119,13 @@ modelli in `models/<versione>/`, artefatti dei run in `experiments/<run>/`, doc 
   padding e margini non scalano). Oltre 1,5× le pagine visibili si richiedono a **220 dpi**
   (`?dpi=220`, lista chiusa in `pdf_export.parse_preview_dpi`), con tetto `MAX_HIRES_PAGES=8`
   per documento.
-  I documenti stanno in una **LRU in memoria** (`_DOCS`, `MAX_DOCS=6`, **`DOC_TTL` 30 min** di
+  I documenti stanno in una **LRU in memoria** (`_DOCS`, `MAX_DOCS=6`, **`DOC_TTL` 10 min** di
   inattività, sweep a ogni accesso + thread daemon) e **mai su disco**: valgono
-  quanto il documento stesso e muoiono col processo.
+  quanto il documento stesso e muoiono col processo. `DELETE /doc/<id>` (sempre 204, idempotente)
+  li butta **subito**: lo chiamano «Pulisci», il caricamento di un documento nuovo, il `pagehide`
+  della finestra e lo **svuotamento per inattività** dell'UI (`IDLE_MIN=7` minuti, avviso a 6,
+  fermo mentre `#go` è disabilitato). ⚠️ il TTL del server non può superare i 7 minuti dichiarati
+  a schermo: `tests/test_i18n_chiavi.py` lega le due cose.
   `POST /pdf/preview` fa lo stesso lavoro di `/pdf` ma lascia il binario nello store e ritorna
   `{doc_id, n_pages, residual, skipped}`: l'anteprima a destra e il bottone "Scarica PDF" usano
   **la stessa copia**, quindi guardare il PDF e poi scaricarlo costa **una sola** anonimizzazione

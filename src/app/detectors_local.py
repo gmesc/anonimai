@@ -88,6 +88,15 @@ SWISS_DETECTORS = [
     ("PIVA",
      re.compile(r"\bCHE[-\s]?\d{3}[.\s]?\d{3}[.\s]?\d{3}(?:\s?(?:IVA|MWST|TVA))?\b"),
      idi_ok, False),
+    # Numero di registro di commercio nel VECCHIO formato (CH-501.3.001.234-5, dove i
+    # primi 3 numeri sono il cantone): sostituito dall'IDI nel 2011, ma sopravvive negli
+    # atti, negli estratti e nei contratti che li citano. Nessun validatore: la cifra
+    # dopo il trattino e' una chiave di controllo di cui non ho una formula verificabile,
+    # e un ✓ senza verifica sarebbe una promessa falsa (come per la tessera d'assicurato).
+    # Va in PIVA con l'IDI: e' l'altro identificativo della stessa impresa.
+    ("PIVA",
+     re.compile(r"\bCH[-\s]?\d{3}[.\s]\d[.\s]\d{3}[.\s]\d{3}[-\s]?\d\b"),
+     None, True),
     # Telefono svizzero: +41 / 0041 / 0xx + 3-2-2 ("091 123 45 67", "079 123 45 67").
     # La regex italiana di upstream vuole 5-8 cifre attaccate dopo il prefisso e
     # non vede la forma spezzata svizzera. Il "(0)" dopo +41 e' usuale sulle carte
@@ -146,8 +155,11 @@ _TAG_OVERRIDES = {
                "CA12345AB · 756.1234.5678.97"),
     "TARGA": ("Targa di veicolo (anche svizzera)", "Vehicle plate (Swiss included)",
               "AB 123 CD · TI 123456"),
-    "PIVA": ("Partita IVA / IDI-UID svizzero (checksum verificato)",
-             "VAT number / Swiss UID (checksum verified)", "12345678901 · CHE-105.805.649"),
+    # il ✓ e' per-entita' (campo validated), non per tag: IVA e IDI hanno un checksum,
+    # il vecchio n. di registro no — la legenda lo dice invece di lasciarlo intendere
+    "PIVA": ("Partita IVA / IDI-UID svizzero (checksum verificato) / n. registro di commercio",
+             "VAT number / Swiss UID (checksum verified) / old commercial register number",
+             "12345678901 · CHE-105.805.649 · CH-020.3.912.345-6"),
     "TELEPHONENUM": ("Numero di telefono (anche +41)", "Phone number (+41 included)",
                      "+39 333 1234567 · 091 123 45 67"),
     "AMOUNT": ("Importo in denaro (€ / CHF)", "Money amount (€ / CHF)",

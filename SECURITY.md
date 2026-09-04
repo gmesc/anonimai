@@ -41,7 +41,9 @@ verificato — è in [docs/VERIFICA-OFFLINE.md](docs/VERIFICA-OFFLINE.md).
 - L'app **non fa chiamate di rete** a runtime: niente API, telemetria, CDN, aggiornamenti automatici.
   Una dipendenza online è considerata un bug di architettura.
 - Il server ascolta su `127.0.0.1`. Esporlo (`--host 0.0.0.0`, Docker senza `127.0.0.1:`) è una scelta
-  dell'operatore, che ne assume la responsabilità.
+  dell'operatore, che ne assume la responsabilità. Chi lo espone deve impostare
+  `PII_AUTH="utente:password"` (credenziale HTTP Basic su tutto tranne `/health` e `/assets`; l'app
+  avvisa all'avvio se manca) e mettere davanti un proxy TLS: Basic da solo viaggia in chiaro.
 - I binari delle release sono accompagnati da un file `.sha256`: verificare l'impronta prima di
   installare (`scripts/checksums.sh --check <file>`).
 - Le dipendenze sono passate a `pip-audit` a ogni build (job `audit` in `tests.yml` e uno step nel

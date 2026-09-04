@@ -126,6 +126,34 @@ class TestIdi(unittest.TestCase):
         self.assertFalse(ents[0]["validated"])
 
 
+class TestRegistroDiCommercio(unittest.TestCase):
+    """Vecchio numero di registro di commercio (CH-020.3.912.345-6): sostituito
+    dall'IDI nel 2011 ma ancora citato negli atti e negli estratti. Va in PIVA con
+    l'IDI — e' l'altro identificativo della stessa impresa — e senza spunta di
+    verifica, perche' della cifra finale non ho una formula da controllare."""
+
+    def test_rilevato_come_piva(self):
+        found = labels("Iscritta al registro con n. CH-020.3.912.345-6 dal 1998.")
+        self.assertIn(("PIVA", "CH-020.3.912.345-6"), found)
+
+    def test_senza_spunta_di_verifica(self):
+        ents = [e for e in dt.detect_regex("CH-501.3.001.234-5") if e["label"] == "PIVA"]
+        self.assertEqual(len(ents), 1)
+        self.assertFalse(ents[0]["validated"])       # nessun checksum: niente promessa
+
+    def test_non_mangia_l_iban_svizzero(self):
+        # un IBAN comincia anch'esso per CH + cifre: se la regex fosse piu' larga
+        # se lo prenderebbe, e l'IBAN perderebbe il suo checksum mod-97
+        found = labels("IBAN CH93 0076 2011 6238 5295 7 della ditta.")
+        self.assertIn(("IBAN", "CH93 0076 2011 6238 5295 7"), found)
+        self.assertFalse(any(tag == "PIVA" for tag, _ in found))
+
+    def test_convive_con_l_idi_nella_stessa_frase(self):
+        found = labels("CHE-105.805.649 (gia' CH-020.3.912.345-6)")
+        self.assertIn(("PIVA", "CHE-105.805.649"), found)
+        self.assertIn(("PIVA", "CH-020.3.912.345-6"), found)
+
+
 class TestTelefonoSvizzero(unittest.TestCase):
 
     def test_forme(self):

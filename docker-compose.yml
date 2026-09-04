@@ -31,6 +31,13 @@ services:
     environment:
       PII_HOST: 0.0.0.0
       PII_PORT: 5005
+      # Credenziale: serve SOLO se togli "127.0.0.1:" dalla riga ports qui sopra,
+      # cioe' se l'app diventa raggiungibile da altre macchine. Con la porta mappata
+      # sul loopback dell'host il confine lo mette gia' Docker e questa resta vuota.
+      # Formato "utente:password"; il login lo disegna il browser. Basic viaggia in
+      # chiaro: se esce dalla rete locale, mettici davanti un proxy TLS.
+      # PII_AUTH: "studio:cambiami"
+
       # Nessuna chiamata a Hugging Face a runtime: il modello e' nell'immagine.
       HF_HUB_OFFLINE: 1
       TRANSFORMERS_OFFLINE: 1

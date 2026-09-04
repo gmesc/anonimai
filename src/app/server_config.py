@@ -22,8 +22,18 @@ Nella stessa directory vivono anche le preferenze di anonimizzazione, prefs.json
 
 E' un file separato di proposito: Tauri riscrive config.json per intero quando si
 cambia la porta dallo splash, e sovrascriverebbe qualunque altra chiave.
+
+Chi espone il server in rete puo' chiuderlo con una credenziale:
+
+  PII_AUTH="utente:password"   (oppure --auth sulla riga di comando)
+
+HTTP Basic su ogni rotta tranne /health (sonda degli orchestratori) e /assets.
+Sta nell'ambiente e non nei file di configurazione: vedi la sezione in fondo.
 """
 
+import base64
+import binascii
+import hmac
 import json
 import os
 import socket
@@ -193,6 +203,81 @@ def resolve(cli_host=None, cli_port=None):
     host = cli_host or os.environ.get("PII_HOST") or cfg.get("host") or DEFAULT_HOST
     port = cli_port or os.environ.get("PII_PORT") or cfg.get("port") or DEFAULT_PORT
     return str(host), int(port)
+
+
+# --------------------------------------------------------------------------- #
+# fork gmesc/anonimai: credenziale per il server esposto in rete
+#
+# Il server ascolta su 127.0.0.1 e li' non serve nessuna credenziale: chi e' sulla
+# macchina e' gia' dentro. Ma chi lo espone (--host 0.0.0.0, Docker su un server
+# d'ufficio) offre un SERVIZIO: i documenti degli altri passano da li'. Fino a ieri
+# l'unica difesa era un proxy davanti; adesso basta PII_AUTH="utente:password".
+#
+# HTTP Basic e non un login proprio: nessuna schermata da disegnare, nessuna sessione,
+# nessun cookie: la finestra la fa il browser. Non protegge da chi ascolta il traffico
+# (Basic viaggia in chiaro): il cifrato lo mette un reverse proxy davanti, ed e' scritto
+# nel README. La credenziale vive nell'ambiente del processo, come host e porta: NON in
+# config.json (Tauri lo riscrive per intero, invariante 11) e NON in prefs.json (e' in
+# chiaro e lo maneggia l'UI).
+# --------------------------------------------------------------------------- #
+AUTH_ENV = "PII_AUTH"
+_LOOPBACK = {"127.0.0.1", "localhost", "::1", "[::1]", "0:0:0:0:0:0:0:1"}
+
+
+def parse_auth(value):
+    """"utente:password" -> (utente, password). None se manca o e' malformata.
+
+    Rifiuta le forme senza due punti, senza utente o senza password: una credenziale
+    a meta' e' peggio di nessuna credenziale, perche' fa credere che ci sia una difesa.
+    La password puo' contenere i due punti (si divide sul primo).
+    """
+    if not value:
+        return None
+    s = str(value).strip()
+    if ":" not in s:
+        return None
+    user, _, pwd = s.partition(":")
+    if not user or not pwd:
+        return None
+    return (user, pwd)
+
+
+def load_auth(cli_auth=None):
+    """Credenziale effettiva. Catena: CLI --auth > env PII_AUTH > nessuna."""
+    return parse_auth(cli_auth or os.environ.get(AUTH_ENV))
+
+
+def check_basic(header, credential) -> bool:
+    """True se l'header Authorization corrisponde alla credenziale attesa.
+
+    Confronto a tempo costante (hmac.compare_digest) su entrambi i campi: un
+    confronto normale con == esce al primo carattere diverso, e la differenza di
+    tempo dice a chi prova quanto e' vicino. Entrambi i confronti si eseguono
+    sempre, senza corto circuito, per la stessa ragione.
+    """
+    if not credential:
+        return True                       # nessuna credenziale richiesta
+    if not header or not header.startswith("Basic "):
+        return False
+    try:
+        raw = base64.b64decode(header[6:].strip(), validate=True).decode("utf-8")
+    except (binascii.Error, UnicodeDecodeError, ValueError):
+        return False
+    if ":" not in raw:
+        return False
+    user, _, pwd = raw.partition(":")
+    ok_user = hmac.compare_digest(user, credential[0])
+    ok_pwd = hmac.compare_digest(pwd, credential[1])
+    return ok_user and ok_pwd
+
+
+def is_loopback(host) -> bool:
+    """True se l'indirizzo serve solo questa macchina.
+
+    0.0.0.0 e :: NON sono loopback: sono il jolly, cioe' tutte le interfacce.
+    E' il caso che fa scattare l'avviso all'avvio quando manca la credenziale.
+    """
+    return str(host or "").strip().lower() in _LOOPBACK
 
 
 def port_available(host: str, port: int) -> bool:

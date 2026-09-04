@@ -54,7 +54,10 @@ sending the real data out**.
 > the authors never see your data, **you remain the data controller and the final human review of
 > every output is yours**. Detection is statistical and can miss values. No badge on this page is a
 > compliance certification — see [TERMS.md](TERMS.md), [SECURITY.md](SECURITY.md) and
-> [docs/CONFORMITA-CH.md](docs/CONFORMITA-CH.md) (Swiss nLPD / Ticino LPDP mapping).
+> [docs/CONFORMITA-CH.md](docs/CONFORMITA-CH.md) (Swiss nLPD / Ticino LPDP mapping),
+> [docs/RAPPORTO-CONFORMITA-SETTORI.md](docs/RAPPORTO-CONFORMITA-SETTORI.md) (what the app really
+> covers, sector by sector) and [docs/MODELLI-DOCUMENTAZIONE.md](docs/MODELLI-DOCUMENTAZIONE.md)
+> (record-of-processing row, impact-assessment skeleton, privacy-notice paragraph).
 
 <table>
 <tr>
@@ -362,8 +365,12 @@ Publish the port as `127.0.0.1:5005:5005`, not `5005:5005`, unless you actually 
 service to your LAN — inside the container the bind is `0.0.0.0` on purpose, and the network
 boundary is Docker's job. **If you do expose it, you are providing a service to other people**: their
 documents transit through your host, you are the data controller/processor for that flow, the app
-shows a warning banner to every user, and the AGPL §13 source offer applies. Put it behind
-authenticated, encrypted access.
+shows a warning banner to every user, and the AGPL §13 source offer applies.
+
+**Close the door**: set `PII_AUTH="user:password"` (or `--auth user:password`) and every route but
+`/health` and `/assets` asks for HTTP Basic credentials — the browser draws the login box, the app
+adds no UI. Without it, a non-loopback bind prints a warning on startup. Basic travels in clear:
+put a TLS reverse proxy (Caddy, nginx) in front when it leaves the local network.
 
 Useful knobs (all optional):
 

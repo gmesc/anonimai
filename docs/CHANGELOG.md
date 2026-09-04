@@ -65,6 +65,64 @@ manomesso. Tutti e tre erano coperti da promesse (README, invariante 1) e da nes
   **dodici cose che non sono state verificate** (Windows, Tauri, Electron, WebView native,
   Docker, la scadenza attesa a orologio, il checksum della tessera d'assicurato…).
 
+## 2026-09-04 — quello che resta acceso: credenziale, svuotamento a 7 minuti, buone abitudini
+
+Dopo `CONFORMITA-CH.md` restava una domanda: fra le cose che quel documento lascia «al titolare»,
+quali può togliergli il codice? Cinque, e sono queste. Le altre — base legale, DPIA, contratto col
+fornitore, rilettura — non sono togliibili, e adesso hanno almeno uno scheletro da riempire.
+
+- **`DELETE /doc/<id>` e sessione che si svuota da sola.** Il documento non viveva solo a schermo:
+  restava nella RAM del server fino al TTL. Ora la rotta lo butta subito (204 sempre, anche per un
+  id già scaduto: il client non deve distinguere «cancellato» da «già sparito»), e la chiamano
+  «Pulisci», il caricamento di un documento nuovo, il `pagehide` della finestra e lo **svuotamento
+  per inattività** dopo **7 minuti** — con avviso un minuto prima, così chi si è alzato non perde
+  quello che non ha ancora scaricato. Il timer riparte a ogni gesto (freno da 5 s: un `mousemove`
+  ne genererebbe centinaia) e **non scatta mentre l'app lavora**: su un PDF lungo si aspetta senza
+  toccare niente, e svuotare a metà anonimizzazione sarebbe un guasto travestito da misura.
+  ⚠️ **`DOC_TTL` sceso da 30 a 10 minuti**: all'utente diciamo «dopo 7 minuti non resta niente», e
+  la frase deve restare vera anche quando il browser muore senza riuscire a chiamare `DELETE`. Un
+  TTL più lungo della promessa fatta a schermo è una promessa falsa. Un test la lega al codice.
+  Il dizionario tenuto con «💾 ricorda» **sopravvive** allo svuotamento automatico (è un salvataggio
+  voluto: cancellarlo per un timer sarebbe perdita di dati non richiesta); «Pulisci» lo toglie lo
+  stesso, perché è il gesto che dice «ho finito».
+- **Credenziale sul server esposto** (`PII_AUTH="utente:password"`, o `--auth`): HTTP Basic su tutto
+  tranne `/health`/`/healthz` (la sonda del container non ha credenziali) e `/assets`. Basic e non
+  un login nostro: nessuna schermata da disegnare, nessuna sessione, nessun cookie — la finestra la
+  fa il browser, e nell'UI non c'è una riga in più. Il cifrato resta al reverse proxy, ed è detto.
+  Confronto con `hmac.compare_digest` su utente e password, entrambi valutati sempre. La coppia vive
+  nell'ambiente del processo: **non** in `config.json` (Tauri lo riscrive per intero, invariante 11)
+  e **non** in `prefs.json` (è in chiaro e lo maneggia l'UI). Host non-loopback senza credenziale →
+  **avviso all'avvio**, non rifiuto: il compose fa girare l'app su `0.0.0.0` *dentro* il container
+  con la porta mappata su `127.0.0.1` dell'host, e lì il confine lo mette già Docker; rifiutare
+  spegnerebbe una configurazione corretta.
+- **«💾 ricorda» chiede conferma.** Accendere quella spunta scrive su disco, in chiaro, tutte le PII
+  del documento. Un clic distratto non basta: su un computer di segreteria condiviso il collega del
+  turno dopo troverebbe i nomi dell'ultima pratica. Spegnerla non chiede niente.
+- **Promemoria del blocco schermo** al primo avvio (dopo le Condizioni, non insieme: due veli si
+  chiudono senza leggerli) con «non ricordarmelo più», e **scheda «Buone abitudini»** in Impostazioni:
+  computer incustodito, cloud e dispositivi personali (il transito involontario è il modo più comune
+  in cui i dati escono), ladri di credenziali spiegati prima di dare i consigli, posta e messaggi,
+  i file scaricati, e che cosa si rischia con le cifre. Il blocco schermo lo imposta il sistema
+  operativo: l'app ricorda e spiega, non esegue — un programma che dicesse di farlo darebbe una
+  sicurezza finta.
+- **N. di registro di commercio vecchio formato** (`CH-020.3.912.345-6`) → `PIVA`, senza spunta di
+  verifica: della cifra finale non ho una formula pubblica da controllare, e un ✓ senza verifica è
+  una promessa falsa (stessa disciplina della tessera d'assicurato). Non tocca l'IBAN svizzero, che
+  comincia anch'esso per `CH` + cifre: test dedicato, perché sarebbe il modo di perdere il mod-97.
+- **Documenti nuovi**: `docs/RAPPORTO-CONFORMITA-SETTORI.md` (che cosa l'app copre davvero in scuola,
+  amministrazione pubblica, studi medici, studi legali e notarili, ditte e indipendenti — tre colonne
+  fisse: *l'app lo fa da sola* · *lo fai tu, e come* · *nessuno può garantirlo*) e
+  `docs/MODELLI-DOCUMENTAZIONE.md` (riga di registro, scheletro di valutazione d'impatto con le
+  misure dell'app già compilate, paragrafo d'informativa). Il primo dice a un dirigente scolastico
+  che sui testi pedagogici l'anonimizzazione automatica **non basta**, e perché.
+- **`tests/test_i18n_chiavi.py`**: ogni chiave usata nell'UI esiste in italiano *e* in inglese. La
+  suite non esegue il JS, quindi una chiave aggiunta da una parte sola non la pescava nessuno — e i
+  testi sono appena cresciuti di parecchio. Suite: **119 test verdi**, sempre senza modello.
+- Non fatto, e perché: imporre il blocco schermo (lo fa il sistema, non noi); HTTPS dentro l'app
+  (certificati e rinnovo sono lavoro del proxy); utenti multipli e log degli accessi (chi espone
+  un'istanza offre un servizio e ci mette il suo proxy: una credenziale basta a chiudere la porta);
+  timer di inattività configurabile (7 minuti fissi finché qualcuno non chiede il contrario).
+
 ## 2026-09-04 — distribuire senza claim: condizioni d'uso, tagline, banner rete, checksum delle release
 
 Dopo la mappa nLPD/LPDP la domanda era: che cosa espone l'autore di un tool offline? Non il
