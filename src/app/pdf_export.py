@@ -444,6 +444,33 @@ def _scrub_widgets(page, patterns):
     return done
 
 
+def _drop_covered_annots(page, taken):
+    """Elimina annotazioni e widget che intersecano un rettangolo redatto.
+    apply_redactions() riscrive solo il content stream: l'ASPETTO di
+    un'annotazione (es. il widget di una firma digitale, con tanto di
+    "Digitally signed by..." e data) resta e si ridisegna sopra la redazione.
+    Un campo firma inoltre porta con se' firmatario e certificato: se l'utente
+    lo ha coperto (o il modello ci ha trovato una PII), va via tutto il campo."""
+    removed = 0
+    try:
+        for w in list(page.widgets() or []):
+            if any(fitz.Rect(w.rect).intersects(r) for r in taken):
+                page.delete_widget(w)
+                removed += 1
+    except Exception:
+        pass
+    try:
+        for a in list(page.annots() or []):
+            if a.type[0] == fitz.PDF_ANNOT_REDACT:
+                continue
+            if any(fitz.Rect(a.rect).intersects(r) for r in taken):
+                page.delete_annot(a)
+                removed += 1
+    except Exception:
+        pass
+    return removed
+
+
 def _scrub_toc(doc, patterns):
     """Titoli dei segnalibri: spesso ricalcano intestazioni con nomi e numeri."""
     try:
@@ -620,6 +647,8 @@ def redact_pdf(pdf_bytes, mapping, fill=REDACT_FILL, text_color=REDACT_TEXT,
         "ocr_pages":      pagine lette via OCR,
         "annots":         sostituzioni nelle annotazioni,
         "widgets":        sostituzioni nei campi modulo,
+        "annots_removed": annotazioni/widget eliminati perche' sotto una
+                          redazione (es. widget di firma digitale),
         "toc":            sostituzioni nei segnalibri,
         "embedded":       allegati rimossi,
     }
@@ -662,7 +691,7 @@ def redact_pdf(pdf_bytes, mapping, fill=REDACT_FILL, text_color=REDACT_TEXT,
 
     by_ph = {ph: 0 for ph, _, _ in usable}
     patterns = [(pat, ph) for ph, _, pat in usable]   # per annot/widget/TOC
-    total = n_annots = n_widgets = n_boxes = 0
+    total = n_annots = n_widgets = n_boxes = n_dropped = 0
     ocr_pages = set()
     # parole che NON possono finire nel layer invisibile: qualunque token di
     # qualunque valore del dizionario (anche i saltati — soprattutto loro)
@@ -708,6 +737,7 @@ def redact_pdf(pdf_bytes, mapping, fill=REDACT_FILL, text_color=REDACT_TEXT,
             n_boxes += 1
         if taken:
             _apply_redactions(page)   # rimozione VERA: content stream + pixel immagine
+            n_dropped += _drop_covered_annots(page, taken)
         if layer_words:
             _insert_text_layer(page, layer_words, taken, value_tokens)
         # dopo le redazioni: annotazioni e campi modulo non sono content stream
@@ -731,6 +761,7 @@ def redact_pdf(pdf_bytes, mapping, fill=REDACT_FILL, text_color=REDACT_TEXT,
         "ocr_pages": len(ocr_pages),
         "annots": n_annots,
         "widgets": n_widgets,
+        "annots_removed": n_dropped,
         "toc": n_toc,
         "embedded": n_emb,
     }

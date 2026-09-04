@@ -119,6 +119,31 @@ class TestManualBoxes(unittest.TestCase):
         self.assertNotIn("RISERVATO", txt)
         self.assertNotIn("parti", txt.replace("[ORG_1]", ""))
 
+    def test_box_removes_overlapping_widget(self):
+        # l'aspetto di un widget (es. firma digitale, "Digitally signed by...")
+        # NON e' content stream: apply_redactions lo lascia e si ridisegna
+        # sopra la redazione. Un riquadro che lo copre deve eliminare il campo.
+        doc = fitz.open()
+        page = doc.new_page(width=500, height=700)
+        page.insert_text((90, 100), "Documento con firma.", fontsize=12)
+        w = fitz.Widget()
+        w.field_name = "Signature1"
+        w.field_type = fitz.PDF_WIDGET_TYPE_TEXT
+        w.field_value = "Digitally signed by MARIO ROSSI"
+        w.rect = fitz.Rect(100, 500, 400, 560)
+        page.add_widget(w)
+        pdf = doc.tobytes()
+        doc.close()
+
+        box = {"page": 0, "x0": 90 / 500, "y0": 490 / 700,
+               "x1": 410 / 500, "y1": 570 / 700}
+        out, report = px.redact_pdf(pdf, {}, manual_boxes=[box])
+        self.assertEqual(report["annots_removed"], 1)
+        with fitz.open(stream=out, filetype="pdf") as d:
+            self.assertEqual(list(d[0].widgets() or []), [])
+        self.assertNotIn("MARIO ROSSI", _text_of(out))
+        self.assertIn("Documento", _text_of(out))       # il resto resta
+
     def test_parse_manual_boxes(self):
         # clamp fuori range + scarto dei degeneri (click senza drag)
         raw = ('[{"page":0,"x0":-0.2,"y0":0.1,"x1":0.5,"y1":1.7},'
