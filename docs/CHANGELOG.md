@@ -5,6 +5,31 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-04 — smoke PDF: il campo modulo va provato in ENTRAMBI i modi (sostituito / eliminato)
+
+Lo smoke `src/app/smoke_pdf_export.py` falliva su `check("campi modulo ripuliti", rep["widgets"] > 0)`:
+22/23. **Non era una perdita di dati** — era un'aspettativa vecchia rispetto al comportamento reale.
+
+- Con PyMuPDF 1.28.2 il valore di un widget AcroForm **visibile** è estraibile anche come testo di
+  pagina. Quindi `apply_redactions()` lo copre e `_drop_covered_annots` (`pdf_export.py`) **elimina**
+  l'intero campo: `_scrub_widgets` non trova più nulla da sostituire, `rep["widgets"]` resta 0 e
+  `rep["annots_removed"]` vale 1. Verificato sull'output: nessun widget residuo, «Mario Rossi» non
+  leggibile né nel testo né nei byte grezzi. Il dato era davvero rimosso; a fallire era il controllo.
+- Il PDF di prova ora ha **due** campi: quello visibile di prima (che finisce sotto una redazione →
+  ramo **eliminazione**) e uno **nascosto** (`PDF_ANNOT_IS_HIDDEN`, fuori dal testo di pagina → ramo
+  **sostituzione**). Il campo nascosto è il caso vero dei moduli compilati: la PII resta nel `/V`
+  anche quando a schermo non si vede nulla, ed è l'unico motivo per cui `_scrub_widgets` esiste.
+- Tre controlli al posto di uno: sostituzione avvenuta, eliminazione avvenuta, e — la proprietà che
+  interessa davvero — **nessun valore di campo modulo leggibile nell'output**. Le prime due
+  descrivono il *come*, la terza sarebbe rossa comunque se un giorno cambiasse di nuovo il *come*.
+- ⚠️ Il controllo vecchio era **fragile per costruzione**: fissava il meccanismo (la sostituzione)
+  invece del risultato (la PII non è più leggibile). Un aggiornamento di PyMuPDF che sposta il lavoro
+  da un ramo all'altro lo fa diventare rosso senza che nulla si sia rotto.
+
+Prove: `python src/app/smoke_pdf_export.py` → **25/25**; `python -m unittest discover tests` → 121 OK.
+
+---
+
 ## 2026-09-04 — «in locale» dimostrato invece che dichiarato: CSP, prove anti-egress, catena di fornitura
 
 I tre modi in cui una responsabilità per **dolo** può ricadere sull'autore di un tool offline

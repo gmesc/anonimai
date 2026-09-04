@@ -44,12 +44,24 @@ def build_pdf():
     a.set_info(title="Mario Rossi", content="Chiamare Mario Rossi")
     a.update()
 
+    # campo VISIBILE: il suo valore e' anche testo di pagina, quindi finisce
+    # sotto una redazione -> esercita l'ELIMINAZIONE di _drop_covered_annots
     w = fitz.Widget()
     w.rect = fitz.Rect(50, 400, 250, 420)
     w.field_name = "nome"
     w.field_type = fitz.PDF_WIDGET_TYPE_TEXT
     w.field_value = "Mario Rossi"
     p.add_widget(w)
+
+    # campo NASCOSTO: valore fuori dal testo di pagina, nessuna redazione lo
+    # copre -> esercita la SOSTITUZIONE di _scrub_widgets. E' il caso vero dei
+    # moduli compilati: la PII resta nel /V anche quando nulla si vede.
+    h = fitz.Widget()
+    h.rect = fitz.Rect(300, 600, 500, 620)
+    h.field_name = "nome_nascosto"
+    h.field_type = fitz.PDF_WIDGET_TYPE_TEXT
+    h.field_value = "Mario Rossi"
+    p.add_widget(h).set_flags(fitz.PDF_ANNOT_IS_HIDDEN)
 
     p2 = doc.new_page()
     p2.insert_text((50, 80), "Ancora Mario Rossi, pagina due.", fontsize=11)
@@ -77,6 +89,7 @@ print("occorrenze:", rep["by_placeholder"], "\n")
 with fitz.open(stream=out, filetype="pdf") as d:
     txt = px._readable_text(d)
     meta, toc, embs = d.metadata, d.get_toc(simple=True), d.embfile_names()
+    widget_vals = [w.field_value for pg in d for w in (pg.widgets() or [])]
 low = txt.lower()
 
 check("nome semplice redatto", "mario rossi" not in low)
@@ -87,7 +100,10 @@ check("email redatta", "m.rossi@studio.it" not in low)
 check("citta redatta", "milano" not in low)
 check("placeholder scritti al posto delle PII", "[FULLNAME_1]" in txt and "[IBAN_1]" in txt)
 check("annotazioni ripulite", rep["annots"] > 0)
-check("campi modulo ripuliti", rep["widgets"] > 0)
+check("campo modulo nascosto: valore sostituito", rep["widgets"] > 0)
+check("campo modulo coperto da redazione: eliminato", rep["annots_removed"] > 0)
+check("nessun valore di campo modulo leggibile nell'output",
+      not any("Mario Rossi" in (v or "") for v in widget_vals), widget_vals)
 check("segnalibri ripuliti", rep["toc"] > 0 and "Mario Rossi" not in " ".join(e[1] for e in toc), toc)
 check("allegati rimossi", rep["embedded"] == 1 and not embs, embs)
 check("metadati azzerati", not meta.get("author") and not meta.get("title"))
