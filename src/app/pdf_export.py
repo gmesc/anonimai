@@ -36,16 +36,35 @@ Rete di sicurezza finale: `report["residual"]` elenca i placeholder il cui valor
 e' ANCORA leggibile nell'output (testo di pagina + annotazioni + widget + TOC).
 Deve essere vuota; l'UI avvisa se non lo e'.
 
-Limiti noti (= punti 2-4 della issue #7):
-  - testo dentro immagini raster (scansioni, loghi, blocchi firma): non esiste nel
-    layer testuale, quindi non puo' essere trovato ne' redatto (serve OCR). Se in
-    tutto il PDF non si trova NESSUNA occorrenza, il chiamante deve rifiutare:
-    meglio un errore che un PDF "anonimizzato" che non lo e';
+OCR (issue #98 / #7 punto 2): il testo dentro le immagini raster — scansioni intere
+o carta intestata/loghi su pagine normali — viene reso visibile con l'OCR integrato
+di PyMuPDF (Tesseract compilato dentro la wheel: servono SOLO i file tessdata, non
+il binario). Tre modalita' per pagina, decise da `page_textpage()`:
+  - solo testo nativo             -> nessun OCR (zero costo nuovo);
+  - immagini, testo scarso        -> OCR dell'intera pagina (scansione);
+  - immagini + testo nativo       -> OCR delle sole immagini, fuso col nativo.
+Sulle pagine-scansione redatte si scrive anche un layer di testo INVISIBILE
+(render_mode=3) con il testo OCR non-PII: l'output diventa ricercabile.
+Senza tessdata (`ocr_available()` False) tutto degrada al comportamento di prima.
+
+Riquadri manuali (issue #98 punto 2, firme e timbri): `manual_boxes` in
+`redact_pdf` — rettangoli {page, x0..y1} in FRAZIONI 0-1 della pagina come
+mostrata; i pixel sotto vengono cancellati (`PDF_REDACT_IMAGE_PIXELS`), non
+coperti. Con i riquadri il dizionario puo' anche essere vuoto.
+
+Limiti noti (= punti 3-4 della issue #7):
+  - firme e timbri NON vengono riconosciuti da soli: si coprono con i riquadri
+    manuali (non sono testo, l'OCR non li vede);
   - valori troppo corti/ambigui (< 2 caratteri alfanumerici, o 2 sole cifre) NON
     vengono redatti: cercarli ovunque devasterebbe il documento. Finiscono in
-    `report["skipped"]` e l'UI DEVE avvisare, perche' restano in chiaro.
+    `report["skipped"]` e l'UI DEVE avvisare, perche' restano in chiaro;
+  - se in tutto il PDF non si trova NESSUNA occorrenza (e non ci sono riquadri),
+    il chiamante deve rifiutare: meglio un errore che un PDF "anonimizzato" che
+    non lo e'.
 """
 
+import json
+import os
 import re
 import unicodedata
 
@@ -54,6 +73,153 @@ import fitz  # PyMuPDF
 
 class PdfError(ValueError):
     """Errore d'uso (PDF non valido, protetto, dizionario vuoto...)."""
+
+
+# --------------------------------------------------------------------------- #
+# OCR — PyMuPDF ha Tesseract compilato dentro la wheel: serve SOLO la cartella
+# dei language data (tessdata), niente binario di sistema. Se manca, tutte le
+# funzioni degradano al comportamento senza OCR: mai un crash per una feature
+# opzionale.
+# --------------------------------------------------------------------------- #
+OCR_LANGS = os.environ.get("PII_OCR_LANGS", "ita+eng")
+OCR_DPI = 300               # sotto i 300 Tesseract perde i corpi piccoli dei footer
+_MIN_NATIVE_CHARS = 30      # sotto: la pagina e' una scansione, OCR dell'intera pagina
+_MIN_IMG_SIDE = 20          # pt: immagini piu' piccole (icone) non giustificano l'OCR
+
+_TESSDATA = "?"             # sentinella: None = cercato e non trovato
+
+
+def _has_langs(d):
+    """La cartella ha TUTTE le lingue configurate? Una tessdata senza ita
+    farebbe fallire ogni OCR a runtime: meglio dichiararsi non disponibili
+    subito (e con PII_OCR_LANGS=eng una tessdata solo-inglese torna valida)."""
+    return all(os.path.isfile(os.path.join(d, lang + ".traineddata"))
+               for lang in OCR_LANGS.split("+") if lang)
+
+
+def tessdata_dir():
+    """Cartella dei .traineddata (con le lingue configurate presenti), o None.
+    Precedenza: PII_TESSDATA > TESSDATA_PREFIX > ricerca di PyMuPDF
+    (fitz.get_tessdata).
+
+    ⚠️ La libreria Tesseract dentro MuPDF legge ANCHE l'env TESSDATA_PREFIX,
+    e puo' vincere sul parametro `tessdata=` passato a get_textpage_ocr: un
+    env sbagliato rompeva l'OCR anche col percorso giusto in mano (misurato:
+    'Error opening data file /nonexistent/ita.traineddata' con tessdata=
+    valido). Qui l'env si RIALLINEA alla cartella scelta, una volta sola."""
+    global _TESSDATA
+    if _TESSDATA != "?":
+        return _TESSDATA
+    found = None
+    for cand in (os.environ.get("PII_TESSDATA"), os.environ.get("TESSDATA_PREFIX")):
+        if cand and os.path.isdir(cand) and _has_langs(cand):
+            found = cand
+            break
+    if found is None:
+        try:
+            auto = fitz.get_tessdata() or None
+        except Exception:
+            auto = None
+        if auto and os.path.isdir(auto) and _has_langs(auto):
+            found = auto
+    if found is not None:
+        os.environ["TESSDATA_PREFIX"] = found
+    _TESSDATA = found
+    return _TESSDATA
+
+
+def ocr_available():
+    return tessdata_dir() is not None
+
+
+def page_textpage(page):
+    """(textpage, mode) per leggere la pagina, immagini comprese.
+
+    mode: 'native'    -> textpage None, si usano i metodi normali (nessuna
+                         immagine rilevante, o tessdata assente, o OCR fallito);
+          'ocr-full'  -> scansione: OCR dell'intera pagina rasterizzata;
+          'ocr-mixed' -> pagina normale con immagini (carta intestata, loghi):
+                         OCR delle sole immagini, fuso col testo nativo (full=False).
+
+    Il criterio e' la NATURA (c'e' un'immagine abbastanza grande da poter
+    contenere testo), non la posizione: header e footer non sono casi speciali.
+    """
+    tess = tessdata_dir()
+    if tess is None:
+        return None, "native"
+    try:
+        # ponytail: soglia fissa sui pt del bbox; se un giorno servisse finezza,
+        # il posto per pesare le immagini e' qui.
+        infos = page.get_image_info()
+    except Exception:
+        infos = []
+    big = any(fitz.Rect(i["bbox"]).width >= _MIN_IMG_SIDE
+              and fitz.Rect(i["bbox"]).height >= _MIN_IMG_SIDE for i in infos)
+    if not big:
+        return None, "native"
+    native = len((page.get_text() or "").strip())
+    full = native < _MIN_NATIVE_CHARS
+    try:
+        tp = page.get_textpage_ocr(language=OCR_LANGS, dpi=OCR_DPI,
+                                   full=full, tessdata=tess)
+    except Exception:
+        return None, "native"
+    return tp, ("ocr-full" if full else "ocr-mixed")
+
+
+def extract_page_text(page):
+    """Testo della pagina, immagini comprese quando l'OCR e' disponibile.
+    E' quello che l'app manda al modello: la stessa lente della redazione."""
+    tp, _ = page_textpage(page)
+    return page.get_text(textpage=tp) if tp is not None else page.get_text()
+
+
+# DPI ammessi per l'anteprima a video: LISTA CHIUSA, non un numero libero.
+# Il client chiede la risoluzione con cui vuole le pagine (serve allo zoom: oltre
+# il dettaglio nativo l'immagine sgrana), ma un dpi arbitrario sarebbe la leva per
+# far renderizzare un A4 a 2000 dpi — gigabyte di pixel per pagina, dentro un
+# processo che tiene tutto in RAM.
+PREVIEW_DPI_ALLOWED = (110, 220)
+
+
+def parse_preview_dpi(raw, default=PREVIEW_DPI_ALLOWED[0]):
+    """DPI richiesto dal client -> uno dei valori ammessi, altrimenti il default.
+    Non solleva: una query string sbagliata non e' un errore d'uso, e' rumore."""
+    try:
+        v = int(raw)
+    except (TypeError, ValueError):
+        return default
+    return v if v in PREVIEW_DPI_ALLOWED else default
+
+
+def parse_manual_boxes(raw):
+    """Riquadri manuali dal client: lista di {page, x0, y0, x1, y1} in FRAZIONI
+    0-1 della pagina come mostrata (indipendenti dal DPI dell'anteprima).
+    Valida e clampa: e' input di frontiera. Ritorna la lista pulita."""
+    if raw is None or raw == "":
+        return []
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except ValueError:
+            raise PdfError("manual_boxes non e' JSON valido.")
+    if not isinstance(raw, list):
+        raise PdfError("manual_boxes deve essere una lista di riquadri.")
+    if len(raw) > 500:
+        raise PdfError("Troppi riquadri manuali (max 500).")
+    out = []
+    for b in raw:
+        try:
+            page = int(b["page"])
+            x0, y0, x1, y1 = (min(max(float(b[k]), 0.0), 1.0)
+                              for k in ("x0", "y0", "x1", "y1"))
+        except (TypeError, KeyError, ValueError):
+            raise PdfError("Riquadro non valido in manual_boxes.")
+        # degeneri (click senza drag, o tutto fuori pagina): si scartano zitti
+        if page < 0 or x1 - x0 < 0.003 or y1 - y0 < 0.003:
+            continue
+        out.append({"page": page, "x0": x0, "y0": y0, "x1": x1, "y1": y1})
+    return out
 
 
 # --------------------------------------------------------------------------- #
@@ -104,10 +270,12 @@ def _covered(rect, taken, thr=0.85):
 # --------------------------------------------------------------------------- #
 # Indice char-preciso della pagina + ricerca con confini di parola
 # --------------------------------------------------------------------------- #
-def _page_char_index(page):
+def _page_char_index(page, textpage=None):
     """(testo, [bbox per carattere]) dalla pagina: ogni carattere del layer
-    testuale con il suo rettangolo (None per i newline di fine riga)."""
-    raw = page.get_text("rawdict")
+    testuale con il suo rettangolo (None per i newline di fine riga).
+    Con un textpage OCR l'indice copre anche il testo dentro le immagini:
+    tutta la catena a valle (pattern, rect, redazione) resta identica."""
+    raw = page.get_text("rawdict", textpage=textpage)
     chars, boxes = [], []
     for block in raw.get("blocks", []):
         if block.get("type") != 0:          # solo blocchi di testo
@@ -204,7 +372,7 @@ def _scrub_metadata(doc):
         doc.set_metadata({
             "title": "", "author": "", "subject": "", "keywords": "",
             "creationDate": "", "modDate": "", "trapped": "",
-            "creator": "rizzo-pii", "producer": "rizzo-pii",
+            "creator": "AnonimAI", "producer": "AnonimAI",
         })
     except Exception:
         pass
@@ -276,6 +444,33 @@ def _scrub_widgets(page, patterns):
     return done
 
 
+def _drop_covered_annots(page, taken):
+    """Elimina annotazioni e widget che intersecano un rettangolo redatto.
+    apply_redactions() riscrive solo il content stream: l'ASPETTO di
+    un'annotazione (es. il widget di una firma digitale, con tanto di
+    "Digitally signed by..." e data) resta e si ridisegna sopra la redazione.
+    Un campo firma inoltre porta con se' firmatario e certificato: se l'utente
+    lo ha coperto (o il modello ci ha trovato una PII), va via tutto il campo."""
+    removed = 0
+    try:
+        for w in list(page.widgets() or []):
+            if any(fitz.Rect(w.rect).intersects(r) for r in taken):
+                page.delete_widget(w)
+                removed += 1
+    except Exception:
+        pass
+    try:
+        for a in list(page.annots() or []):
+            if a.type[0] == fitz.PDF_ANNOT_REDACT:
+                continue
+            if any(fitz.Rect(a.rect).intersects(r) for r in taken):
+                page.delete_annot(a)
+                removed += 1
+    except Exception:
+        pass
+    return removed
+
+
 def _scrub_toc(doc, patterns):
     """Titoli dei segnalibri: spesso ricalcano intestazioni con nomi e numeri."""
     try:
@@ -315,14 +510,21 @@ def _strip_embedded(doc):
     return removed
 
 
-def _readable_text(doc):
+def _readable_text(doc, ocr_pages=frozenset()):
     """TUTTO il testo leggibile del documento: pagine + annotazioni + campi
     modulo + segnalibri. E' la base della verifica dei residui: se un valore
     compare qui, l'anonimizzazione NON e' completa.
-    NB: non vede il testo dentro immagini raster (loghi, firme, scansioni)."""
+    Le pagine in `ocr_pages` (quelle redatte via OCR) vengono RI-OCRIZZATE:
+    senza, su una scansione la verifica direbbe "0 residui" sempre, anche con
+    una PII ancora visibile nei pixel — il falso-anonimizzato che questo
+    modulo esiste per impedire. Il costo (un secondo passaggio OCR sulle sole
+    pagine toccate) e' il prezzo dell'onesta'."""
     parts = []
     for page in doc:
-        parts.append(page.get_text())
+        if page.number in ocr_pages:
+            parts.append(extract_page_text(page))
+        else:
+            parts.append(page.get_text())
         try:
             for a in page.annots():
                 if a.type[0] == fitz.PDF_ANNOT_REDACT:
@@ -344,18 +546,66 @@ def _readable_text(doc):
     return "\n".join(parts)
 
 
-def _verify_residuals(pdf_bytes, items):
+def _verify_residuals(pdf_bytes, items, ocr_pages=frozenset()):
     """Placeholder il cui valore e' ANCORA leggibile nell'output. Usa lo STESSO
     pattern della redazione (sillabazione inclusa), altrimenti dichiarerebbe
     "0 residui" proprio nei casi che il matcher non sa gestire."""
     with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
-        text = _readable_text(doc)
+        text = _readable_text(doc, ocr_pages)
     residual = []
     for ph, val in items:
         pat = _value_pattern(val)
         if pat and pat.search(text):
             residual.append(ph)
     return residual
+
+
+def _apply_redactions(page):
+    """apply_redactions con i pixel delle IMMAGINI cancellati sotto i rect
+    (esplicito, non affidato al default che cambia tra versioni) e la grafica
+    vettoriale INTATTA dove il binding lo permette: una redazione dentro una
+    cella non deve portarsi via i filetti della tabella."""
+    kw = {"images": getattr(fitz, "PDF_REDACT_IMAGE_PIXELS", 2)}
+    if hasattr(fitz, "PDF_REDACT_LINE_ART_NONE"):
+        kw["graphics"] = fitz.PDF_REDACT_LINE_ART_NONE
+    try:
+        page.apply_redactions(**kw)
+    except TypeError:                       # binding vecchio senza i keyword
+        page.apply_redactions()
+
+
+def _insert_text_layer(page, words, redacted, value_tokens):
+    """Layer di testo INVISIBILE (render_mode=3) sulla pagina-scansione redatta:
+    l'output diventa ricercabile/copiabile e leggibile da un LLM. Non si scrive:
+      - dentro le zone redatte (li' c'e' gia' il placeholder visibile);
+      - nessuna parola che coincide con un valore del dizionario — un valore
+        "saltato" dalla redazione diventerebbe altrimenti testo estraibile,
+        che e' peggio dei soli pixel.
+    ponytail: niente metriche/Tz alla StudIA — qui serve la ricerca, non la
+    selezione pixel-perfect; e solo pagine con rotation 0 (le foto-PDF tipiche),
+    per non aprire la danza delle quattro rotazioni per un extra sganciabile."""
+    if page.rotation != 0:
+        return 0
+    written = 0
+    for w in words:
+        word = (w[4] or "").strip()
+        if not word or _norm(word) in value_tokens:
+            continue
+        r = fitz.Rect(w[0], w[1], w[2], w[3])
+        if r.is_empty or any(r.intersects(t) for t in redacted):
+            continue
+        clean = unicodedata.normalize("NFKC", word).translate(_TRANSLATE)
+        clean = clean.encode("latin-1", "replace").decode("latin-1").strip()
+        if not clean:
+            continue
+        fs = max(4.0, min(r.height, 24.0))
+        try:
+            if page.insert_text((r.x0, r.y1 - fs * 0.18), clean, fontname="helv",
+                                fontsize=fs, render_mode=3) > 0:
+                written += 1
+        except Exception:
+            continue
+    return written
 
 
 # --------------------------------------------------------------------------- #
@@ -369,29 +619,52 @@ REDACT_FILL = (0.486, 0.227, 0.620)
 REDACT_TEXT = (1.0, 1.0, 1.0)
 
 
-def redact_pdf(pdf_bytes, mapping, fill=REDACT_FILL, text_color=REDACT_TEXT):
+def redact_pdf(pdf_bytes, mapping, fill=REDACT_FILL, text_color=REDACT_TEXT,
+               manual_boxes=None):
     """PDF originale -> PDF con redazione vera + placeholder al posto delle PII.
 
     mapping: {"[FULLNAME_1]": "Mario Rossi", ...} (il dizionario di analyze()).
+    Puo' essere vuoto SOLO se manual_boxes non lo e' (documento con la sola
+    firma da coprire).
+    manual_boxes: riquadri {page, x0..y1} in frazioni 0-1 della pagina come
+    mostrata (gia' validati da parse_manual_boxes); i pixel sotto vengono
+    cancellati, senza etichetta (una firma non ha un valore da mappare).
+
+    Le pagine con immagini passano dall'OCR (vedi page_textpage): il testo di
+    scansioni e carte intestate entra nello stesso indice char-preciso del
+    testo nativo. Sulle pagine-scansione redatte si aggiunge il layer di testo
+    invisibile (_insert_text_layer).
+
     Ritorna (bytes, report) con report = {
         "occurrences":    occorrenze redatte nel testo di pagina,
         "by_placeholder": {placeholder: n_occorrenze},
         "not_found":      placeholder cercati ma senza occorrenze di pagina,
         "skipped":        placeholder NON cercati perche' troppo corti/ambigui
                           (restano in chiaro: va segnalato all'utente),
-        "residual":       placeholder ancora leggibili nell'output (deve essere []),
+        "residual":       placeholder ancora leggibili nell'output (deve essere
+                          []; le pagine OCR vengono RI-OCRIZZATE per il check),
+        "manual_boxes":   riquadri manuali applicati,
+        "ocr_pages":      pagine lette via OCR,
         "annots":         sostituzioni nelle annotazioni,
         "widgets":        sostituzioni nei campi modulo,
+        "annots_removed": annotazioni/widget eliminati perche' sotto una
+                          redazione (es. widget di firma digitale),
         "toc":            sostituzioni nei segnalibri,
         "embedded":       allegati rimossi,
     }
     """
-    if not isinstance(mapping, dict) or not mapping:
-        raise PdfError("Dizionario vuoto: anonimizza prima il documento.")
+    mboxes = list(manual_boxes or [])
+    if not isinstance(mapping, dict):
+        raise PdfError("Dizionario non valido.")
     items = [(ph, v) for ph, v in mapping.items()
              if isinstance(ph, str) and isinstance(v, str) and v.strip()]
-    if not items:
-        raise PdfError("Dizionario non valido.")
+    if not items and not mboxes:
+        raise PdfError("Niente da redigere: anonimizza prima il documento "
+                       "o disegna almeno un riquadro.")
+
+    boxes_by_page = {}
+    for b in mboxes:
+        boxes_by_page.setdefault(b["page"], []).append(b)
 
     try:
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
@@ -418,30 +691,55 @@ def redact_pdf(pdf_bytes, mapping, fill=REDACT_FILL, text_color=REDACT_TEXT):
 
     by_ph = {ph: 0 for ph, _, _ in usable}
     patterns = [(pat, ph) for ph, _, pat in usable]   # per annot/widget/TOC
-    total = n_annots = n_widgets = 0
+    total = n_annots = n_widgets = n_boxes = n_dropped = 0
+    ocr_pages = set()
+    # parole che NON possono finire nel layer invisibile: qualunque token di
+    # qualunque valore del dizionario (anche i saltati — soprattutto loro)
+    value_tokens = {t for _, v in items for t in _norm(v).split()}
 
     for page in doc:
-        text, boxes = _page_char_index(page)
+        tp, mode = page_textpage(page)
+        if mode != "native":
+            ocr_pages.add(page.number)
+        layer_words = None
+        if mode == "ocr-full":
+            layer_words = page.get_text("words", textpage=tp)
         taken = []
-        if text.strip():
-            for ph, val, pat in usable:
-                for m in pat.finditer(text):
-                    rects = _match_rects(boxes, m)
-                    placed_any, labeled = False, False
-                    for r in rects:
-                        if _covered(r, taken):
-                            continue
-                        fs = 0 if labeled else _fit_fontsize(ph, r)
-                        _add_redact_annot(page, r, ph if fs else None,
-                                          fs or 6, fill, text_color)
-                        taken.append(fitz.Rect(r))
-                        placed_any = True
-                        labeled = labeled or bool(fs)
-                    if placed_any:
-                        by_ph[ph] += 1
-                        total += 1
+        if usable:
+            text, boxes = _page_char_index(page, tp)
+            if text.strip():
+                for ph, val, pat in usable:
+                    for m in pat.finditer(text):
+                        rects = _match_rects(boxes, m)
+                        placed_any, labeled = False, False
+                        for r in rects:
+                            if _covered(r, taken):
+                                continue
+                            fs = 0 if labeled else _fit_fontsize(ph, r)
+                            _add_redact_annot(page, r, ph if fs else None,
+                                              fs or 6, fill, text_color)
+                            taken.append(fitz.Rect(r))
+                            placed_any = True
+                            labeled = labeled or bool(fs)
+                        if placed_any:
+                            by_ph[ph] += 1
+                            total += 1
+        # riquadri manuali: frazioni della pagina come mostrata -> pt. page.rect
+        # E' gia' lo spazio "visto" (rotazione inclusa), lo stesso del PNG di
+        # anteprima e di add_redact_annot: nessuna matrice da applicare.
+        pw, ph_ = page.rect.width, page.rect.height
+        for b in boxes_by_page.get(page.number, []):
+            r = fitz.Rect(b["x0"] * pw, b["y0"] * ph_, b["x1"] * pw, b["y1"] * ph_)
+            if r.is_empty:
+                continue
+            _add_redact_annot(page, r, None, 6, fill, text_color)
+            taken.append(fitz.Rect(r))
+            n_boxes += 1
         if taken:
-            page.apply_redactions()   # rimozione VERA dal content stream
+            _apply_redactions(page)   # rimozione VERA: content stream + pixel immagine
+            n_dropped += _drop_covered_annots(page, taken)
+        if layer_words:
+            _insert_text_layer(page, layer_words, taken, value_tokens)
         # dopo le redazioni: annotazioni e campi modulo non sono content stream
         n_annots += _scrub_annots(page, patterns)
         n_widgets += _scrub_widgets(page, patterns)
@@ -458,9 +756,12 @@ def redact_pdf(pdf_bytes, mapping, fill=REDACT_FILL, text_color=REDACT_TEXT):
         "by_placeholder": by_ph,
         "not_found": [ph for ph, n in by_ph.items() if n == 0],
         "skipped": skipped,
-        "residual": _verify_residuals(out, checked),
+        "residual": _verify_residuals(out, checked, ocr_pages),
+        "manual_boxes": n_boxes,
+        "ocr_pages": len(ocr_pages),
         "annots": n_annots,
         "widgets": n_widgets,
+        "annots_removed": n_dropped,
         "toc": n_toc,
         "embedded": n_emb,
     }

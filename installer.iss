@@ -3,13 +3,13 @@
 ; Prerequisito: aver gia' eseguito la build PyInstaller (cartella dist\AnonimizzatorePII).
 
 [Setup]
-AppName=Anonimizzatore PII
+AppName=AnonimAI
 AppVersion=1.0
 AppPublisher=Rizzo AI
 DefaultDirName={autopf}\AnonimizzatorePII
 DefaultGroupName=Anonimizzatore PII
 OutputDir=installer_out
-OutputBaseFilename=AnonimizzatorePII-Setup
+OutputBaseFilename=AnonimAI-Setup
 Compression=lzma2
 SolidCompression=yes
 ArchitecturesInstallIn64BitMode=x64compatible

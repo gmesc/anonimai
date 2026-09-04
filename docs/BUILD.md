@@ -21,6 +21,53 @@ impacchettato con PyInstaller. Con Tauri la finestra nativa lo lancia come **pro
 
 ---
 
+## OCR delle scansioni (tessdata)
+
+L'OCR dei PDF-scansione usa il **Tesseract compilato dentro la wheel di PyMuPDF**: non serve
+installare Tesseract, servono **solo i language data** (`ita.traineddata`, `eng.traineddata`).
+Senza, l'app funziona come prima e i messaggi d'errore spiegano come abilitarlo
+(`/health` espone `"ocr": true|false`).
+
+```bash
+# opzione A — cartella propria (vale su qualsiasi OS; anche per il sidecar Tauri):
+mkdir -p ~/tessdata && cd ~/tessdata
+curl -LO https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/ita.traineddata
+curl -LO https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/eng.traineddata
+export PII_TESSDATA=~/tessdata          # Windows: setx PII_TESSDATA %USERPROFILE%\tessdata
+```
+
+- **opzione B (macOS)**: `brew install tesseract tesseract-lang` — la cartella viene trovata da sola.
+- **opzione B (Windows)**: installer UB Mannheim (spuntare Italian) — poi `PII_TESSDATA` sulla
+  sua cartella `tessdata` se non viene trovata da sola.
+- **Docker**: già incluso nel `Dockerfile` (scaricato pinnato in build, offline a runtime).
+- Lingue diverse: `PII_OCR_LANGS` (default `ita+eng`); i file delle lingue elencate devono
+  esistere nella cartella, altrimenti l'OCR si dichiara non disponibile.
+
+## Guscio Electron (prova rapida, `npm start`)
+
+Per **provare l'app in una finestra desktop senza impacchettare niente** — niente Rust,
+niente PyInstaller — c'e' un guscio Electron in **`electron/`**. Fa lo stesso mestiere della
+finestra Tauri (lancia il backend Flask come processo figlio, aspetta `/health`, punta la
+finestra sull'app, e alla chiusura termina il figlio), ma il backend gira **dal sorgente**
+con un Python del sistema.
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt   # una volta
+npm install        # scarica Electron in electron/node_modules
+npm start          # apre la finestra AnonimAI
+```
+
+- **Python**: si cerca `PII_PYTHON` → `.venv/` → `venv/` → `build_env/` → `python3`. Se manca
+  qualcosa la finestra lo dice invece di restare in caricamento.
+- **Porta**: `PII_PORT=5006 npm start` per cambiarla; se e' occupata il backend esce con **76**
+  e lo splash lo spiega (stesso codice che riconosce Tauri).
+- **OCR**: nessuna configurazione se Tesseract e' installato di sistema (`brew install tesseract
+  tesseract-lang`), altrimenti `PII_TESSDATA=/percorso/tessdata npm start`.
+- I link esterni (repo, Hugging Face nei Crediti) si aprono nel **browser di sistema**.
+
+⚠️ **Non e' il guscio di distribuzione**: gli installer firmati restano Tauri (sotto). Qui non
+c'e' sidecar impacchettato, quindi la cartella `electron/` non entra nelle build di rilascio.
+
 ## App Tauri (finestra nativa + installer NSIS)
 
 ### Prerequisiti (una volta)
@@ -40,16 +87,16 @@ Output: `tauri\src-tauri\backend\pii-backend\pii-backend.exe` (+ `_internal\`, m
 ```powershell
 cd tauri
 npm install                  # prima volta: scarica la CLI di Tauri
-npx tauri icon ..\src\app\assets\mascot_shield.png   # (ri)genera le icone (già fatto)
+npx tauri icon ..\src\app\assets\detective.png   # (ri)genera le icone dall'icona detective
 npx tauri build              # compila Rust + bundle + installer NSIS
 ```
-Output installer: `tauri\src-tauri\target\release\bundle\nsis\Rizzo PII_2.0.0_x64-setup.exe`
+Output installer: `tauri\src-tauri\target\release\bundle\nsis\AnonimAI_2.0.0_x64-setup.exe`
 (il nome viene da `productName` in `tauri.conf.json`).
 Installer **per-utente** (niente admin), in italiano, con shortcut e disinstallazione.
 
 ### Sviluppo / debug
 - `npx tauri dev` avvia l'app collegata ai sorgenti (ricompila Rust al volo).
-- Log del backend: `%LOCALAPPDATA%\rizzo-pii\backend.log` (il sidecar è windowed, niente console).
+- Log del backend: `%LOCALAPPDATA%\anonimai\backend.log` (il sidecar è windowed, niente console).
 - Per rigenerare con un **nuovo modello**: riaddestra (crea `models\rizzo-pii-0.3B-v{VERSION}\`),
   aggiorna il path in **`build_sidecar.spec`** (riga `datas += [("models/rizzo-pii-0.3B-v...", "pii_model")]`),
   poi rifai il passo 1 e il passo 2. Build attuale: **v1.5.0**.
@@ -73,13 +120,13 @@ gh workflow run build-windows.yml        # oppure Actions > build-windows > Run 
 
 # b) release vera: il tag fa partire anche release.yml, che crea la release;
 #    build-windows la attende (max 5 min) e ci carica l'.exe
-git tag -a v2.0.1 -m "Rizzo PII 2.0.1" && git push origin v2.0.1
+git tag -a v2.0.1 -m "AnonimAI 2.0.1" && git push origin v2.0.1
 
 # c) riempire una release GIA' pubblicata (es. l'.exe mancante sulla 2.0.0):
 #    l'asset lo carica il runner, non passa da casa
 gh workflow run build-windows.yml -f release_tag=v2.0.0
 ```
-L'installer viene rinominato **`Rizzo-PII-<versione>-Windows-Setup.exe`** (la versione arriva da
+L'installer viene rinominato **`AnonimAI-<versione>-Windows-Setup.exe`** (la versione arriva da
 `tauri.conf.json`), la stessa convenzione degli artefatti macOS/Linux a cui puntano i pulsanti di
 download della landing in [`docs/index.html`](index.html). Attenzione: gli **artifact dei run non
 sono pubblici** (servono login e accesso al repo, e scadono) — per la landing serve sempre un
@@ -127,13 +174,13 @@ Windows: Docker Desktop con backend WSL2).
 
 ```bash
 cd /mnt/d/documenti/rizzo_pii     # o una copia in ~/ (più veloce: vedi nota)
-docker build -t rizzo-pii-builder -f Dockerfile.linux .
+docker build -t anonimai-builder -f Dockerfile.linux .
 docker run --rm -e VENV=/opt/venv -e APPIMAGE_EXTRACT_AND_RUN=1 \
-  -v "$PWD":/work -w /work rizzo-pii-builder
+  -v "$PWD":/work -w /work anonimai-builder
 # artefatti -> tauri/src-tauri/target/release/bundle/{deb,appimage}/  (visibili anche da Windows)
 ```
 - L'immagine si ricostruisce solo se cambiano le dipendenze; le build successive sono veloci.
-- Se l'**AppImage** fallisce nel container (FUSE): `... rizzo-pii-builder bash build_linux.sh deb`
+- Se l'**AppImage** fallisce nel container (FUSE): `... anonimai-builder bash build_linux.sh deb`
   produce solo il `.deb`.
 - **Velocità**: buildare sul mount `/mnt/d` (filesystem Windows) è lento. Per build ripetute,
   `rsync` i sorgenti + il modello in `~/` dentro WSL e monta quella copia.
@@ -158,14 +205,14 @@ bash build_macos.sh                    # .app + .dmg
 bash build_macos.sh app                # solo il .app (piu' veloce, per provare)
 VENV=build_env_macos bash build_macos.sh   # venv dedicato invece di .venv
 ```
-Output: `tauri/src-tauri/target/release/bundle/macos/Rizzo PII.app` e `.../dmg/*.dmg`.
+Output: `tauri/src-tauri/target/release/bundle/macos/AnonimAI.app` e `.../dmg/*.dmg`.
 
 Note specifiche di macOS:
 - **Niente indice PyTorch CPU**: su macOS la ruota di default è già CPU/MPS, quindi lo script
   installa `torch` senza `--index-url` (a differenza di Windows/Linux).
 - **Firma**: il bundle **non è firmato né notarizzato**. In locale si apre senza problemi (un file
   che non arriva da internet non ha l'attributo di quarantena). Copiandolo su un altro Mac serve
-  "tasto destro → Apri", oppure `xattr -dr com.apple.quarantine "Rizzo PII.app"`. Per distribuirlo
+  "tasto destro → Apri", oppure `xattr -dr com.apple.quarantine "AnonimAI.app"`. Per distribuirlo
   davvero servono un Developer ID e la notarizzazione Apple.
 - **Architettura**: il `.app` esce per l'arch della macchina che compila (arm64 su Apple Silicon).
   Per un binario universale servirebbero due build di PyInstaller + `lipo`.

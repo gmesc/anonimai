@@ -1,13 +1,13 @@
 # ============================================================================
-# Rizzo PII — webapp (server Flask + UI) in un container.
+# AnonimAI — webapp (server Flask + UI) in un container.
 #
 # L'immagine e' AUTOSUFFICIENTE: dentro ci sono le dipendenze CPU e il modello
 # scaricato da Hugging Face in fase di build. A runtime NON esce nulla verso
 # internet (HF_HUB_OFFLINE=1): e' lo stesso patto dell'app desktop, i documenti
 # non lasciano la macchina.
 #
-#   docker build -t rizzo-pii .
-#   docker run --rm -p 5005:5005 rizzo-pii        # -> http://127.0.0.1:5005
+#   docker build -t anonimai .
+#   docker run --rm -p 5005:5005 anonimai        # -> http://127.0.0.1:5005
 #
 # NB: e' un'immagine CPU. Per la GPU servirebbe il torch cu128 + nvidia-runtime;
 # per l'inferenza su un documento la CPU basta (vedi README, sezione Deployment).
@@ -37,6 +37,18 @@ RUN pip install --upgrade pip \
  && pip install --index-url https://download.pytorch.org/whl/cpu "torch==2.13.0" \
  && pip install "transformers==5.14.1" tokenizers safetensors flask pymupdf gunicorn huggingface_hub
 
+# --- OCR (tessdata) ----------------------------------------------------------
+# PyMuPDF ha Tesseract COMPILATO nella wheel: per l'OCR delle scansioni servono
+# solo i language data (.traineddata), nessun binario di sistema. Si scaricano
+# pinnati dal repo ufficiale tessdata_fast (stessa qualita' dei pacchetti
+# Debian) in build; a runtime l'immagine resta offline come prima.
+ENV TESSDATA_PREFIX=/usr/local/share/tessdata
+RUN python -c "import os, urllib.request; \
+os.makedirs('/usr/local/share/tessdata', exist_ok=True); \
+[urllib.request.urlretrieve( \
+  f'https://github.com/tesseract-ocr/tessdata_fast/raw/4.1.0/{l}.traineddata', \
+  f'/usr/local/share/tessdata/{l}.traineddata') for l in ('ita','eng','osd')]"
+
 # --- modello -----------------------------------------------------------------
 # app.py con APP_MODEL_VERSION="1.5.0" cerca models/rizzo-pii-0.3B-v1.5.0/ a partire
 # dalla root della repo (parents[2] rispetto a src/app/app.py) -> /app/models/.
@@ -54,7 +66,7 @@ WORKDIR /app
 COPY src/app/ /app/src/app/
 
 # utente non-root; la home deve essere scrivibile perche' server_config scrive
-# config.json/prefs.json in ~/.local/share/rizzo-pii (preferenze dell'UI).
+# config.json/prefs.json in ~/.local/share/anonimai (preferenze dell'UI).
 RUN useradd --create-home --uid 10001 app && chown -R app:app /app
 USER app
 ENV HOME=/home/app

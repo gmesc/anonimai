@@ -1,4 +1,4 @@
-# docker-compose.yml — Rizzo PII webapp
+# docker-compose.yml — AnonimAI webapp
 #
 # Uso:
 #   docker compose up -d --build     # build + avvio in background
@@ -8,7 +8,7 @@
 # -> http://127.0.0.1:5005
 
 services:
-  rizzo-pii:
+  anonimai:
     build:
       context: .
       dockerfile: Dockerfile
@@ -16,8 +16,8 @@ services:
         # Cambia qui se vuoi una revisione/modello diverso.
         MODEL_REPO: rizzoaiacademy/rizzo-pii-0.3B
         MODEL_REVISION: v1.5.0
-    image: rizzo-pii:local
-    container_name: rizzo-pii
+    image: anonimai:local
+    container_name: anonimai
     restart: unless-stopped
 
     ports:
@@ -36,9 +36,9 @@ services:
       OMP_NUM_THREADS: 4
 
     volumes:
-      # Preferenze UI (~/.local/share/rizzo-pii): senza questo si perdono
+      # Preferenze UI (~/.local/share/anonimai): senza questo si perdono
       # a ogni ricreazione del container.
-      - rizzo-pii-home:/home/app
+      - anonimai-home:/home/app
 
     # /health risponde 503 finche' il modello non e' caricato: lo start_period
     # copre il caricamento a freddo.
@@ -74,4 +74,4 @@ services:
         max-file: "3"
 
 volumes:
-  rizzo-pii-home:
+  anonimai-home:

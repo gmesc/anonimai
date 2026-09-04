@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Build dell'app desktop Rizzo PII per macOS (.app + .dmg), CPU/offline.
+# Build dell'app desktop AnonimAI per macOS (.app + .dmg), CPU/offline.
 #
 # Va costruito SU macOS. Speculare a build_linux.sh / docs/BUILD.md (Windows):
 # stesso build_sidecar.spec, ma qui il sidecar esce come 'pii-backend' (senza
@@ -31,9 +31,9 @@ cd "$ROOT"
 MODEL_DIR="models/rizzo-pii-0.3B-v1.5.0"   # deve combaciare con build_sidecar.spec
 VENV="${VENV:-.venv}"
 BUNDLES="${*:-app dmg}"
-APP="$ROOT/tauri/src-tauri/target/release/bundle/macos/Rizzo PII.app"
+APP="$ROOT/tauri/src-tauri/target/release/bundle/macos/AnonimAI.app"
 ENT="$ROOT/tauri/macos_python_entitlements.plist"
-DMG_OUT="$ROOT/tauri/src-tauri/target/release/bundle/dmg/Rizzo-PII-2.0.0-macOS-arm64.dmg"
+DMG_OUT="$ROOT/tauri/src-tauri/target/release/bundle/dmg/AnonimAI-2.0.0-macOS-arm64.dmg"
 
 # ---- 0) controlli ----------------------------------------------------------
 [ -d "$MODEL_DIR" ] || { echo "ERRORE: modello mancante: $MODEL_DIR"; exit 1; }
@@ -108,7 +108,7 @@ sign "$APP" >/dev/null 2>&1
 codesign --verify --deep --strict "$APP" || { echo "ERRORE: verify app fallita"; exit 1; }
 
 echo ">>> [5/8] notarizzo la .app (attendo Apple)"
-ZIP="$ROOT/build/RizzoPII_app.zip"; mkdir -p "$ROOT/build"; rm -f "$ZIP"
+ZIP="$ROOT/build/AnonimAI_app.zip"; mkdir -p "$ROOT/build"; rm -f "$ZIP"
 /usr/bin/ditto -c -k --keepParent "$APP" "$ZIP"
 ST=$(notarize_status "$ZIP"); echo "    .app notarization: $ST"
 [ "$ST" = "Accepted" ] || { echo "ERRORE: notarizzazione .app = $ST"; exit 1; }
@@ -120,7 +120,7 @@ echo ">>> [7/8] costruisco il .dmg (hdiutil, preserva i symlink)"
 DMGROOT="$ROOT/build/dmgroot"; rm -rf "$DMGROOT"; mkdir -p "$DMGROOT"
 cp -R "$APP" "$DMGROOT/"; ln -s /Applications "$DMGROOT/Applications"
 mkdir -p "$(dirname "$DMG_OUT")"; rm -f "$DMG_OUT"
-hdiutil create -volname "Rizzo PII" -srcfolder "$DMGROOT" -fs HFS+ -format UDZO -ov "$DMG_OUT" >/dev/null
+hdiutil create -volname "AnonimAI" -srcfolder "$DMGROOT" -fs HFS+ -format UDZO -ov "$DMG_OUT" >/dev/null
 
 echo ">>> [8/8] firmo + notarizzo + staple il .dmg"
 codesign --force --timestamp --sign "$ID" "$DMG_OUT" >/dev/null 2>&1

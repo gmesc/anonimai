@@ -1,4 +1,4 @@
-// App desktop Anonimizzatore PII (rizzo-pii).
+// App desktop AnonimAI (anonimizzatore PII in locale).
 //
 // Architettura: il motore e' il backend Python/Flask (modello mmBERT) impacchettato con
 // PyInstaller e incluso come risorsa ("backend/pii-backend/pii-backend.exe"). Tauri fa da
@@ -19,11 +19,11 @@ use std::time::Duration;
 use serde_json::json;
 use tauri::{Manager, WebviewUrl, WebviewWindowBuilder};
 
-/// Logging diagnostico su file (~/rizzo-pii/tauri.log).
+/// Logging diagnostico su file (~/anonimai/tauri.log).
 /// Usa un file nella stessa directory del backend.log.
 fn tlog(msg: &str) {
     use std::io::Write;
-    let dir = dirs::home_dir().unwrap_or_default().join("rizzo-pii");
+    let dir = dirs::home_dir().unwrap_or_default().join("anonimai");
     let _ = fs::create_dir_all(&dir);
     if let Ok(mut f) = fs::OpenOptions::new()
         .create(true).append(true)
@@ -52,13 +52,29 @@ struct ServerAddr(Mutex<(String, u16)>);
 // ---------------------------------------------------------------------------
 
 /// Restituisce la directory di configurazione dell'app:
-/// - Windows:  %LOCALAPPDATA%\rizzo-pii
-/// - Linux:    ~/.local/share/rizzo-pii
-/// - macOS:    ~/Library/Application Support/rizzo-pii
+/// - Windows:  %LOCALAPPDATA%\anonimai
+/// - Linux:    ~/.local/share/anonimai
+/// - macOS:    ~/Library/Application Support/anonimai
+///
+/// Migrazione una-tantum dal vecchio nome (rizzo-pii): i file si COPIANO
+/// nella cartella nuova al primo avvio. Va fatta ANCHE qui, non solo in
+/// server_config.py: Tauri legge la porta dal config.json PRIMA di lanciare
+/// il sidecar, e senza migrazione un utente con porta personalizzata verrebbe
+/// atteso sulla 5005 mentre il backend riparte dalla sua porta migrata.
 fn config_dir() -> PathBuf {
-    dirs::data_local_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("rizzo-pii")
+    let base = dirs::data_local_dir().unwrap_or_else(|| PathBuf::from("."));
+    let new = base.join("anonimai");
+    let old = base.join("rizzo-pii");
+    if !new.exists() && old.is_dir() {
+        let _ = fs::create_dir_all(&new);
+        for fn_ in ["config.json", "prefs.json"] {
+            let src = old.join(fn_);
+            if src.is_file() {
+                let _ = fs::copy(&src, new.join(fn_));
+            }
+        }
+    }
+    new
 }
 
 /// Legge host e porta da config.json; se il file non esiste o e' malformato
@@ -238,7 +254,7 @@ fn poll_backend(
         let _ = splash.eval(
             "var n=document.querySelector('.note');\
              if(n){n.textContent='Errore: il backend non si è avviato. \
-             Vedi il log in %LOCALAPPDATA%\\\\rizzo-pii\\\\backend.log';}\
+             Vedi il log in %LOCALAPPDATA%\\\\anonimai\\\\backend.log';}\
              var b=document.querySelector('.bar');if(b){b.style.display='none';}",
         );
     }
@@ -309,7 +325,7 @@ fn retry_backend(app_handle: tauri::AppHandle) {
                 "main",
                 WebviewUrl::External(url.parse().unwrap()),
             )
-            .title("Rizzo PII")
+            .title("AnonimAI")
             .inner_size(1240.0, 840.0)
             .min_inner_size(900.0, 600.0)
             .center()
@@ -398,7 +414,7 @@ pub fn run() {
                         "main",
                         WebviewUrl::External(url.parse().unwrap()),
                     )
-                    .title("Rizzo PII")
+                    .title("AnonimAI")
                     .inner_size(1240.0, 840.0)
                     .min_inner_size(900.0, 600.0)
                     .center()

@@ -1,4 +1,4 @@
-# rizzo-pii — Python dependencies
+# AnonimAI — Python dependencies
 # Tested with Python 3.11+ on Windows. All scripts force UTF-8 and resolve paths from __file__.
 #
 # ──────────────────────────────────────────────────────────────────────────────

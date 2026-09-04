@@ -43,3 +43,7 @@ venv/
 .DS_Store
 Thumbs.db
 *.log
+
+# guscio Electron di sviluppo
+node_modules/
+electron/node_modules/

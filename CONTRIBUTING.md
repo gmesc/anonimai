@@ -1,4 +1,4 @@
-# Contributing to rizzo-pii
+# Contributing to AnonimAI
 
 Thanks for helping build a privacy tool for Italy. 🦔🇮🇹
 

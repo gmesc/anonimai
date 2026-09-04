@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================================
-# Build dell'app desktop Rizzo PII per LINUX (.deb + .AppImage), CPU/offline.
+# Build dell'app desktop AnonimAI per LINUX (.deb + .AppImage), CPU/offline.
 #
 # NON si compila da Windows: PyInstaller e i bundle Tauri Linux (webkit2gtk)
 # vanno costruiti SU Linux. Lancia questo script su Ubuntu/Debian o in WSL2.

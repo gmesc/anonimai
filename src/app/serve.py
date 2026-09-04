@@ -17,7 +17,7 @@ Configurazione host/porta:
   4) default 127.0.0.1:5005
 
 NB: la 5000 su macOS e' occupata da AirPlay Receiver (ControlCenter) -\u003e pagina bianca.
-Log:   %LOCALAPPDATA%\\\\rizzo-pii\\\\backend.log
+Log:   %LOCALAPPDATA%\\\\anonimai\\\\backend.log
 
 Il processo esce con codice 76 (EX_PROTOCOL) se la porta e' occupata: Tauri lo
 riconosce e mostra il form di configurazione nello splash screen.
@@ -27,7 +27,7 @@ import os
 import sys
 
 # --- log su file (windowed mode -> niente console) ------------------------- #
-_logdir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "rizzo-pii")
+_logdir = os.path.join(os.environ.get("LOCALAPPDATA", os.path.expanduser("~")), "anonimai")
 try:
     os.makedirs(_logdir, exist_ok=True)
     _log = open(os.path.join(_logdir, "backend.log"), "w", encoding="utf-8", buffering=1)

@@ -1,6 +1,6 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Rizzo PII",
+  "productName": "AnonimAI",
   "version": "2.0.0",
   "identifier": "com.rizzoai.pii-anonymizer",
   "build": {
@@ -10,7 +10,7 @@
     "windows": [
       {
         "label": "splash",
-        "title": "Rizzo PII",
+        "title": "AnonimAI",
         "width": 460,
         "height": 400,
         "resizable": false,
@@ -28,8 +28,8 @@
     "publisher": "Rizzo AI",
     "copyright": "© Rizzo AI",
     "category": "Productivity",
-    "shortDescription": "Rizzo PII — anonimizzazione in locale",
-    "longDescription": "Rizzo PII: anonimizza documenti legali in locale (modello rizzo-pii) prima di inviarli a un LLM. Ogni dato sensibile diventa un placeholder reversibile. Nessun dato lascia il computer. GDPR compliant.",
+    "shortDescription": "AnonimAI — anonimizzazione in locale",
+    "longDescription": "AnonimAI: anonimizza documenti in locale (modello rizzo-pii) prima di inviarli a un LLM. Ogni dato sensibile diventa un placeholder reversibile. Nessun dato lascia il computer. GDPR compliant.",
     "resources": ["backend/**/*"],
     "icon": [
       "icons/32x32.png",

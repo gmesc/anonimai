@@ -7,9 +7,9 @@ Risoluzione con precedenza:  CLI args  >  env vars  >  config.json  >  default.
 Il file config.json e' condiviso con l'app Tauri (che lo legge/scrive dal lato Rust
 e passa host/porta al sidecar via env PII_HOST/PII_PORT):
 
-  Windows:  %LOCALAPPDATA%\\rizzo-pii\\config.json
-  Linux:    ~/.local/share/rizzo-pii/config.json
-  macOS:    ~/Library/Application Support/rizzo-pii/config.json
+  Windows:  %LOCALAPPDATA%\\anonimai\\config.json
+  Linux:    ~/.local/share/anonimai/config.json
+  macOS:    ~/Library/Application Support/anonimai/config.json
 
 Formato:  {"host": "127.0.0.1", "port": 5005}
 
@@ -26,6 +26,7 @@ cambia la porta dallo splash, e sovrascriverebbe qualunque altra chiave.
 
 import json
 import os
+import re
 import socket
 import sys
 from pathlib import Path
@@ -35,15 +36,35 @@ DEFAULT_PORT = 5005
 EXIT_PORT_CONFLICT = 76  # riconosciuto da Tauri (lib.rs) come "porta occupata"
 
 
-def config_dir() -> Path:
-    """Directory di configurazione (platform-specific, coerente con serve.py e Tauri)."""
+def _config_base() -> Path:
     if sys.platform == "win32":
-        base = Path(os.environ.get("LOCALAPPDATA", Path.home()))
-    elif sys.platform == "darwin":
-        base = Path.home() / "Library" / "Application Support"
-    else:
-        base = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
-    return base / "rizzo-pii"
+        return Path(os.environ.get("LOCALAPPDATA", Path.home()))
+    if sys.platform == "darwin":
+        return Path.home() / "Library" / "Application Support"
+    return Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local" / "share"))
+
+
+def config_dir() -> Path:
+    """Directory di configurazione (platform-specific, coerente con serve.py e Tauri).
+
+    Migrazione una-tantum dal vecchio nome: chi aveva l'app quando si chiamava
+    rizzo-pii ha config.json/prefs.json in `rizzo-pii/` — al primo avvio col
+    nome nuovo i file si COPIANO in `anonimai/` (copia, non rename: un
+    eventuale rollback alla versione vecchia ritrova i suoi). Se la cartella
+    nuova esiste gia', la vecchia non si guarda piu'."""
+    base = _config_base()
+    new = base / "anonimai"
+    old = base / "rizzo-pii"
+    if not new.exists() and old.is_dir():
+        try:
+            new.mkdir(parents=True, exist_ok=True)
+            for fn in ("config.json", "prefs.json"):
+                src = old / fn
+                if src.is_file():
+                    (new / fn).write_bytes(src.read_bytes())
+        except OSError:
+            pass                      # senza migrazione si riparte dai default
+    return new
 
 
 def config_path() -> Path:
@@ -73,15 +94,23 @@ def save_config(host: str, port: int):
 # --------------------------------------------------------------------------- #
 # Preferenze di anonimizzazione (prefs.json, accanto a config.json)
 #
-#   {"excluded_tags": ["AGE"], "mapping_enabled": true}
+#   {"excluded_tags": ["AGE"], "mapping_enabled": true,
+#    "custom_terms": [{"value": "Studio Legale Bianchi", "tag": "ORG"}]}
 #
 #   excluded_tags   -> tag rilevati ma NON sostituiti (restano in chiaro)
 #   mapping_enabled -> false = niente dizionario placeholder->valore, quindi
 #                      l'anonimizzazione e' definitiva e non reversibile
+#   custom_terms    -> Termini personali: valori letterali sempre rilevati, col
+#                      loro tag (uno dei 23 o una label libera). ATTENZIONE:
+#                      contengono stringhe sensibili scelte dall'utente e vivono
+#                      su disco per scelta esplicita (la UI lo dichiara).
 # --------------------------------------------------------------------------- #
 PREFS_FILE = "prefs.json"
 LEGACY_PREFS_FILE = "tags.json"   # nome usato prima che il file contenesse anche il mapping
 DEFAULT_MAPPING_ENABLED = True
+CUSTOM_TERMS_MAX = 200            # voci; oltre, le prime vincono
+CUSTOM_TERM_MAXLEN = 300          # caratteri per valore
+_TAG_RX = re.compile(r"^[A-Z0-9_]{2,20}$")
 
 
 def prefs_path() -> Path:
@@ -101,6 +130,32 @@ def parse_tag_list(value) -> list:
         t = str(it).strip().upper()
         if t and t not in out:
             out.append(t)
+    return out
+
+
+def parse_custom_terms(value) -> list:
+    """Normalizza i Termini personali: lista di {"value", "tag"}.
+    Scarta (mai errore: prefs.json puo' essere vecchio o toccato a mano) le voci
+    senza >= 3 caratteri alfanumerici — sotto, il match devasterebbe il documento
+    (stessa trappola dei valori corti del PDF) — e i tag fuori da [A-Z0-9_]{2,20}.
+    Dedup su (valore lowercase, tag); tetto CUSTOM_TERMS_MAX."""
+    if not isinstance(value, (list, tuple)):
+        return []
+    out, seen = [], set()
+    for it in value:
+        if not isinstance(it, dict):
+            continue
+        val = str(it.get("value") or "").strip()[:CUSTOM_TERM_MAXLEN]
+        tag = str(it.get("tag") or "").strip().upper()
+        if sum(c.isalnum() for c in val) < 3 or not _TAG_RX.match(tag):
+            continue
+        key = (val.lower(), tag)
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append({"value": val, "tag": tag})
+        if len(out) >= CUSTOM_TERMS_MAX:
+            break
     return out
 
 
@@ -146,18 +201,22 @@ def load_prefs() -> dict:
     return {
         "excluded_tags": parse_tag_list(tags),
         "mapping_enabled": parse_bool(mapping, DEFAULT_MAPPING_ENABLED),
+        "custom_terms": parse_custom_terms(data.get("custom_terms")),
     }
 
 
-def save_prefs(excluded_tags=None, mapping_enabled=None) -> dict:
+def save_prefs(excluded_tags=None, mapping_enabled=None, custom_terms=None) -> dict:
     """Scrive prefs.json unendo le chiavi passate a quelle gia' sul file (i None non toccano nulla)."""
     data = _read_prefs_file()
     if excluded_tags is not None:
         data["excluded_tags"] = parse_tag_list(excluded_tags)
     if mapping_enabled is not None:
         data["mapping_enabled"] = parse_bool(mapping_enabled, DEFAULT_MAPPING_ENABLED)
+    if custom_terms is not None:
+        data["custom_terms"] = parse_custom_terms(custom_terms)
     data.setdefault("excluded_tags", [])
     data.setdefault("mapping_enabled", DEFAULT_MAPPING_ENABLED)
+    data.setdefault("custom_terms", [])
     d = config_dir()
     d.mkdir(parents=True, exist_ok=True)
     (d / PREFS_FILE).write_text(json.dumps(data, indent=2), "utf-8")

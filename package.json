@@ -1,0 +1,10 @@
+{
+  "name": "anonimai-desktop",
+  "version": "2.0.0",
+  "private": true,
+  "description": "AnonimAI — scorciatoie per il guscio Electron di sviluppo (npm install && npm start)",
+  "scripts": {
+    "start": "npm start --prefix electron",
+    "postinstall": "npm install --prefix electron"
+  }
+}

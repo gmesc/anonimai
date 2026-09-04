@@ -5,6 +5,245 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-04 — profilo Svizzera/Ticino + Termini personali (`src/app/`)
+
+L'app deve servire anche il sistema svizzero (l'utente lavora su atti ticinesi) e ogni
+verticale — scuola, medico, studio legale — ha item suoi da rilevare. Due risposte, entrambe
+**senza retraining**: gli identificativi CH hanno un formato (quindi rete regex+checksum), e
+gli item specifici di un'installazione sono valori letterali (quindi lista utente).
+
+- **Identificativi CH nei tag esistenti** (`detectors.py`): numero **AVS** → `ID_DOC`
+  (regex + **checksum EAN-13**, la tassonomia manda lì ogni numero previdenziale personale);
+  **Cantoni** → `PROVINCE` (nomi non ambigui da soli; «Canton(e) X» copre anche Uri, Giura e
+  le sigle — mai le sigle nude: «ti» è una parola); **NAP** → `ZIPCODE` (`CH-####` sempre;
+  il 4-cifre nudo solo davanti a località capitalizzata, e 19xx/20xx esclusi perché anni —
+  al prezzo dei NAP romandi scritti senza `CH-`); **targa svizzera** → `TARGA` (sigla
+  cantonale maiuscola + 3-6 cifre). Sempre attivi: additivi e innocui su documenti italiani.
+  Legenda con doppio identificativo («CAP / NAP», «Provincia / Cantone»), esempi che passano
+  il proprio checksum (lezione della #99: `756.1234.5678.97` è valido).
+- **Termini personali** (🏷️ → 📌): lista `{value, tag}` in `prefs.json` (non `config.json`:
+  Tauri lo riscrive per intero) — valori che l'utente vuole **sempre** anonimizzati, match
+  letterale case-insensitive con confini di parola (stessa disciplina del matching PDF),
+  **priorità massima in fusione** (sopra il modello, come il checksum: un termine inserito a
+  mano è la dichiarazione più esplicita possibile). Tag libero ammesso (`[PROGETTO_1]`):
+  placeholder e colori sono già per-label. Minimo 3 alfanumerici a voce (la trappola dei
+  valori corti), tetto 200 voci. `/settings` GET/POST esteso con `custom_terms`.
+  La scheda Sicurezza dichiara l'eccezione: la lista vive **in chiaro su disco**, per scelta.
+- Prove in `tests/test_svizzera.py` (18 test, senza modello). La strada per categorie
+  **semantiche** nuove (retraining con slot+template, come i 5 tag legali IT) resta
+  documentata ma non serviva qui: tutto il pacchetto CH è formato o lista chiusa.
+
+## 2026-08-21 — zoom al puntatore sulle anteprime, specchiato fra le due colonne (chiude #92)
+
+L'issue #92 chiedeva lo zoom «per poter leggere chiaramente il testo, e capire cosa è stato
+anonimizzato o meno»: il punto non è ingrandire, è **verificare la redazione**. Per questo lo
+zoom è unico per le due colonne — si guarda l'originale e il censurato *nello stesso punto*.
+
+- **Zoom al puntatore**: ctrl/⌘ + rotella (che è anche il pinch del trackpad su macOS), più i
+  comandi `− %  +` nella testata; doppio click alterna 100%/200%. La rotella nuda resta lo
+  scroll, o il documento diventerebbe inscorribile.
+- **Un solo stato per due viste**: `ZOOM` si applica come `--z` su entrambe, quindi non possono
+  sfasarsi; `matchScroll` ora specchia **anche l'asse orizzontale**, che prima non esisteva.
+- **Larghezza, non `transform`**: le pagine crescono cambiando larghezza — barre di scorrimento
+  native corrette e riquadri manuali (che sono in frazioni della pagina) ancora al loro posto.
+- ⚠️ **Il fattore di scala si misura, non si deduce**: con `k = z/ZOOM` il punto sotto il
+  puntatore scivolava di ~7 px per passo, perché padding del contenitore e margini fra le
+  pagine non scalano. Usando il rapporto vero fra gli `scrollWidth/Height` prima e dopo il
+  reflow la deriva misurata è **0 px**.
+- **Nitidezza vera oltre 1,5×**: le pagine visibili si richiedono a 220 dpi
+  (`/doc/<id>/page/<n>.png?dpi=220`), precaricate e scambiate a caricamento finito per non far
+  lampeggiare la vista. A 2× la pagina passa da ~910 a 1819 px nativi.
+- **`parse_preview_dpi` in `pdf_export.py`** (dove sta anche `parse_manual_boxes`, e per la
+  stessa ragione: è input di frontiera ed è testabile senza modello): **lista chiusa
+  {110, 220}**. Un dpi libero dal client sarebbe la leva per far renderizzare un A4 a migliaia
+  di dpi dentro un processo che tiene le pagine in RAM.
+- **Tetto sulle pagine ad alto dpi** (`MAX_HIRES_PAGES = 8` per documento): una A4 a 220 dpi è
+  1-3 MB e senza tetto un documento lungo gonfierebbe lo store. Verificato in modo osservabile
+  sui tempi di risposta: dopo 11 pagine chieste a 220, la prima ri-renderizza (28 ms) mentre
+  l'ultima è in cache (0,5 ms).
+- **Se il documento è scaduto dalla LRU** le pagine danno 404: ora l'app lo dice una volta
+  sola invece di lasciare riquadri bianchi (invariante 5).
+
+## 2026-08-21 — guscio Electron per provare l'app con `npm start` (`electron/`)
+
+Banco di prova desktop che non tocca la catena di distribuzione: `electron/main.js` lancia
+`src/app/serve.py` come processo figlio, attende `/health`, punta la finestra sull'app e alla
+chiusura ammazza il figlio (un backend orfano terrebbe porta e modello, e al riavvio darebbe
+il 76). Radice: `npm install && npm start`.
+
+- **Perche' accanto a Tauri e non al suo posto**: Tauri resta il guscio che produce installer
+  firmati col sidecar PyInstaller; questo serve a *vedere l'app in una finestra* senza Rust e
+  senza impacchettare — il backend gira dal sorgente con un `.venv`.
+- **Stessa grammatica del Rust**: `PII_HOST`/`PII_PORT` passati al figlio, codice d'uscita
+  **76** riconosciuto e spiegato nello splash, log del backend indicato all'utente quando il
+  processo muore.
+- **Python risolto a catena**: `PII_PYTHON` → `.venv` → `venv` → `build_env` → `python3`; se
+  non e' eseguibile la finestra dice come creare l'ambiente invece di restare a girare.
+- **Link esterni** (repo, Hugging Face nei Crediti) aperti nel browser di sistema
+  (`setWindowOpenHandler`): dentro una finestra-app non ci sarebbe modo di tornare indietro.
+- Renderer senza Node (`contextIsolation`, niente `nodeIntegration`, niente preload): la pagina
+  e' servita da Flask e non ha nulla da chiedere al sistema.
+- ⚠️ **Nel velo d'avvio l'emoji non va usata come icona**: `🕵️` scritto come testo lo disegna
+  il font di sistema — su macOS l'icona Apple, che non somiglia a quella in topbar (dove il
+  glifo passa dal webfont OpenMoji dell'app). Il velo usa quindi lo stesso **PNG OpenMoji**
+  (`src/app/assets/detective.png`, reso dall'SVG 1F575). Verificato dentro Electron con una
+  cattura vera: immagine decodificata 512×512, non il riquadro vuoto.
+- Su macOS **l'icona del Dock** si imposta con `app.dock.setIcon()`: `BrowserWindow.icon` lì
+  viene ignorato, e l'app resterebbe con il logo di Electron.
+
+## 2026-08-21 — Scheda Sicurezza, popup d'uso ritardati, via Ctrl+Enter (`src/app/app.py`)
+
+- **Ctrl+Enter rimosso** dall'app, non solo nascosto: via il listener su `#src`, via il
+  suggerimento `Ctrl+Enter` nella riga comandi e le regole CSS rimaste orfane. Era una
+  scorciatoia mezza rotta — agganciata alla sola casella di testo, quindi muta proprio quando
+  si guardava l'anteprima di un PDF.
+- **Quarta scheda «Sicurezza»** nelle Impostazioni, con i consigli raccolti in un posto solo:
+  rileggere sempre l'output, che cosa significano gli avvisi *residui*/*saltati*, controllare
+  i tag lasciati in chiaro, il **dizionario come chiave** (vale quanto l'originale: mai
+  allegato insieme, mai in un LLM), pseudonimizzazione vs anonimizzazione definitiva, ciò che
+  il testo non copre (firme/timbri → riquadri manuali, scansioni → OCR, scritte verticali),
+  quale bottone quando, e il perimetro di rete (`127.0.0.1` vs esposizione).
+- **Popup d'uso sui tre bottoni** del risultato (Copia · PDF · Dizionario): compaiono dopo
+  **900 ms** di puntatore fermo e spariscono subito, con `transition-delay` in CSS — niente
+  timer JS. Un suggerimento che scatta al primo passaggio del mouse è rumore; uno che aspetta
+  chi si è fermato a chiedersi «e questo?» è un aiuto. Il popup del dizionario porta
+  l'avviso in rosso: contiene tutte le PII in chiaro.
+- Tutti i testi nuovi sono chiavi i18n (`sec_body`, `tip_copy`, `tip_pdf`, `tip_dict`): IT e EN.
+
+## 2026-08-21 — Impostazioni a schede, riga comandi unica, layout a tutta finestra (`src/app/app.py`)
+
+- **⚙️ Impostazioni a tre schede** (`.tabs` dei token StudIA): **Server** (host/porta, come
+  prima) · **Come funziona** (che cosa fa l'app, perché i dati non escono, come trova le PII,
+  che cosa succede dentro il PDF, e — dichiarato — che cosa **non** promette: col dizionario
+  attivo è *pseudonimizzazione*, quindi dato personale finché il dizionario esiste) ·
+  **Crediti** (progetto originale rizzo-pii di Simone Rizzo, link al repo, pesi e dataset su
+  Hugging Face, licenze MIT/AGPL-3.0/CC BY-SA, rimando a `THIRD_PARTY_LICENSES.md`). Entrambi
+  i pannelli sono chiavi i18n (`how_body`/`cred_body`), quindi seguono la lingua; la riga
+  **Modello** è letta a runtime da `/health`, non scritta a mano.
+- **Footer eliminato**: i crediti vivono nelle Impostazioni. La MIT non chiede un credito in
+  UI (chiede il LICENSE nelle copie, che resta), e l'attribuzione **OpenMoji CC BY-SA** —
+  quella sì obbligatoria — è ora nella scheda Crediti.
+- **Una riga sola per i comandi** della card di input: Anonimizza · Pulisci · switch
+  Dizionario, tutti alti `--ctl-h` (40px). La spiegazione grigia è diventata il popup di una
+  **ⓘ** (hover/focus). Quando la colonna si stringe cede solo l'etichetta (ellissi): switch,
+  badge di stato e ⓘ non si tagliano mai. ⚠️ Due trappole pagate qui: `flex:none` nella
+  regola originale di `.mapsw` vinceva sulla nuova (la riga sforava la colonna di 32px), e
+  `overflow:hidden` sullo switch **ritagliava il popup** — il troncamento va sull'etichetta,
+  non sul contenitore che ospita un elemento flottante.
+- **Niente cornice attorno all'area di lavoro**: `.app` senza padding, card senza bordo
+  proprio; resta **una** linea verticale fra le due colonne e in alto confinano con la topbar.
+  Il margine interno resta in `.bd`. In Deanonimizza il callout è a tutta larghezza, separato
+  dalle viewport da una linea.
+
+## 2026-08-21 — UI a due modalità sul brand, icona detective, drop full-window (`src/app/app.py`)
+
+Quattro cambi di interazione, tutti nell'UI embedded:
+
+- **Via le schede-passo**: l'app apre in **Anonimizza**; il click sul **brand** (🕵️ in alto a
+  sinistra) commuta su **Deanonimizza** (l'ex "Ripristina la risposta") e viceversa. La
+  modalità è scritta nella testata: `AnonimAI — <modalità>` (label in teal, i18n it/en).
+- **Icona detective al posto delle illustrazioni rizzo-pii**: mascotte eliminate da UI, splash
+  Tauri e asset (`src/app/assets/detective.png`, reso dall'SVG OpenMoji `1F575` — stessa
+  licenza CC BY-SA già attribuita in footer). Favicon e splash aggiornati; per l'icona
+  dell'installer: `npx tauri icon ..\src\app\assets\detective.png` (docs/BUILD.md).
+- **Colonne contigue e fluide**: gap 0 con bordo condiviso fra le due viewport (anche nella
+  vista Deanonimizza), `.app` senza max-width — le colonne seguono la finestra.
+- **Drag&drop su tutta la finestra** (solo in modalità Anonimizza): eliminata la dropzone
+  dedicata; un overlay flottante compare quando entra un file (contatore dragenter/leave per
+  gli eventi annidati) e il nome del file caricato va nella testata della card. ⚠️ Con la
+  dropzone se n'è andato anche il **click-per-scegliere-file**: l'`<input type=file>` resta
+  nel DOM (hidden) — se servirà un file picker, riattaccarlo a un bottone è una riga.
+
+## 2026-08-20 — il prodotto si chiama AnonimAI, ovunque
+
+Rinomina completa dell'identità di prodotto: `rizzo-pii` → **AnonimAI** in UI, finestra
+Tauri (productName, titoli, splash), installer e artefatti di release futuri
+(`AnonimAI-<versione>-Windows-Setup.exe`, `.dmg`, volumi), Docker (immagine/servizio/volume
+`anonimai`), landing `docs/index.html`, metadati dei PDF prodotti (`creator`/`producer`),
+documentazione.
+
+Il confine della rinomina (deciso, non accidentale):
+
+- **La cartella di configurazione diventa `anonimai`** (`%LOCALAPPDATA%\anonimai`,
+  `~/Library/Application Support/anonimai`, `~/.local/share/anonimai`) con **migrazione
+  una-tantum** dal vecchio nome: `config.json` e `prefs.json` si **copiano** (non spostano:
+  un rollback ritrova i suoi) al primo avvio. La migrazione vive **sia** in
+  `server_config.py` **sia** in `lib.rs`: Tauri legge la porta prima di lanciare il sidecar,
+  e senza la copia lato Rust un utente con porta personalizzata verrebbe atteso sulla 5005.
+- **Non si rinomina ciò che è esterno o storico**: il modello **`rizzo-pii:0.3B`** (repo HF
+  `rizzoaiacademy/rizzo-pii-0.3B`, cartelle `models/rizzo-pii-0.3B-v*`, run W&B), gli URL
+  GitHub `Rizzo-AI-Academy/rizzo-pii` (issue, badge, release, `cd rizzo-pii` dopo il clone),
+  il dataset comunitario HF, le persone e l'org (Simone Rizzo, Rizzo AI Academy), le release
+  già pubblicate, il profilo keychain di notarizzazione, l'`identifier` Tauri
+  `com.rizzoai.pii-anonymizer` (cambiarlo spezzerebbe l'upgrade delle installazioni esistenti)
+  e il nome interno del sidecar `pii-backend`.
+- ⚠️ Trappola pagata in corso d'opera: "Indi**rizzo**", "Rende**rizzo**", "nota**rizzo**"
+  contengono la sottostringa — la rinomina è fatta per token esatti, mai con un sed cieco.
+
+## 2026-08-20 — l'interfaccia diventa AnonimAI, sugli standard StudIA (`src/app/`)
+
+Restyle completo della UI embedded in `app.py` sul design system StudIA
+(`~/.claude/skills/studia-app-layout`): la versione AnonimAI del progetto ha ora la sua
+identità visiva. Il funzionamento non cambia — stessi id, stessi endpoint, stessa logica.
+
+Scelte che contano:
+
+- **Token separati dalla pelle**: `src/app/assets/tokens.css` (copiato dalla skill, fonte di
+  verità per palette/barre/tema) caricato prima; nel `<style>` embedded resta solo il CSS
+  specifico dell'app. Cambiare identità = cambiare i tre accenti nei token.
+- **Grammatica StudIA**: zero `border-radius` (eccetto chip-toggle e pallini), bordi 1px,
+  ombra solo su hover/flottanti, metadati in maiuscolo, testata = `.topbar.tbar-lg`, testate
+  dei riquadri = barre `.tbar`, viste segmentate accese in teal.
+- **Ruoli fissi degli accenti**: teal = azione (Anonimizza, viste attive, switch ON);
+  giallo = segni dell'utente (i **riquadri manuali** sulle firme, lo switch dizionario OFF);
+  blu = riferimento (callout della tab Ripristina); rosso solo per gli errori (toast).
+- **Tema chiaro/scuro** (`data-theme` su `<html>`, persistito in `pii_theme`): solo i token
+  cambiano; i colori deterministici dei tag hanno una **seconda rampa** per il tema scuro
+  (`colors()` in JS), o i chip pastello sarebbero illeggibili sul fondo scuro.
+- **OpenMoji self-hosted** (`assets/fonts/OpenMoji-color.woff2`, ~1 MB, `unicode-range` sui
+  soli blocchi emoji): icone coerenti su ogni OS, zero rete (l'app resta offline — il default
+  globale Noto via CDN qui è vietato). Attribuzione CC BY-SA 4.0 nel footer. Le build
+  PyInstaller/Tauri includono già `src/app/assets` per intero: niente da toccare negli spec.
+- La scrollbar di pagina **resta visibile** (la skill la nasconde solo perché in StudIA la
+  sostituisce il binario di lettura, che qui non esiste).
+
+## 2026-08-20 — OCR per le scansioni + riquadri manuali per firme e timbri (`src/app/`)
+
+Chiude la issue #98 (e i punti 2-3 della #7): l'anonimizzazione ora funziona anche sui **PDF
+fotografati/scansionati** e sulle **carte intestate incorporate come immagine** in pagine
+normali (il caso studi medici / istituti scolastici), e le **firme/timbri** si oscurano con
+riquadri disegnati a mano sull'anteprima.
+
+Scelte che contano:
+
+- **OCR = PyMuPDF, niente nuove dipendenze**: Tesseract è già compilato dentro la wheel — servono
+  solo i file `tessdata` (`PII_TESSDATA`/`TESSDATA_PREFIX`/ricerca automatica; lingue
+  `PII_OCR_LANGS`, default `ita+eng`). Feature **opzionale con degradazione**: senza tessdata il
+  comportamento è identico a prima e i messaggi dicono come abilitarla; `/health` espone `"ocr"`.
+  ⚠️ pagata sul campo: la libreria legge **anche l'env `TESSDATA_PREFIX`** e vince sul parametro
+  `tessdata=` — l'env viene riallineato alla cartella scelta, o un env sbagliato rompe l'OCR col
+  percorso giusto in mano.
+- **Tre vie per pagina** (`page_textpage`): nativa (zero costo nuovo), scansione (`full=True`),
+  ibrida (`full=False`: OCR delle sole immagini, fuso col testo nativo). Il criterio è la natura
+  (immagine ≥ 20 pt), non la posizione: header e footer non sono casi speciali. Tutta la catena a
+  valle (indice char-preciso, pattern, redazione) è rimasta **invariata**: cambia solo il textpage.
+- **La verifica dei residui ri-OCRizza le pagine toccate**: senza, su una scansione direbbe
+  sempre "0 residui" anche con la PII ancora nei pixel — il falso-anonimizzato che il modulo
+  esiste per impedire. Costo: un secondo passaggio OCR sulle sole pagine OCR, dichiarato.
+- **Layer di testo invisibile** (`render_mode=3`) sulle pagine-scansione redatte: l'output
+  diventa ricercabile/utilizzabile dagli LLM (il caso d'uso della issue #7). Le parole che
+  coincidono con un valore del dizionario — soprattutto i "saltati" — **non** entrano nel layer:
+  diventerebbero testo estraibile, peggio dei soli pixel. Niente metriche pixel-perfect alla
+  StudIA: qui serve la ricerca, non la selezione.
+- **Riquadri manuali**: frazioni 0-1 della pagina **come mostrata** — lo stesso spazio del PNG
+  di anteprima e di `add_redact_annot`, rotazione inclusa, quindi zero geometria lato client.
+  Pixel cancellati (`PDF_REDACT_IMAGE_PIXELS`), grafica vettoriale intatta (una redazione in una
+  cella non porta via i filetti della tabella). Dizionario vuoto ammesso solo con riquadri: un
+  documento con la sola firma da coprire ora si scarica invece di prendere un 422.
+- Prove: `tests/test_pdf_ocr.py` (si **salta** senza tessdata, mai rossa per una feature
+  opzionale) e `tests/test_manual_boxes.py` (gira ovunque, pagine ruotate incluse). Docker:
+  tessdata `ita/eng/osd` scaricati **pinnati** (tessdata_fast 4.1.0) in build, offline a runtime.
+
 ## 2026-08-07 — `Dockerfile`: l'app come webapp in un container
 
 Finora l'unico modo di far girare l'app era l'installer desktop o `python src/app/app.py` con
