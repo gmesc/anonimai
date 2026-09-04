@@ -8,7 +8,8 @@
 
 AnonimAI è un **software open source di supporto** alla pseudonimizzazione e anonimizzazione di
 testi e PDF. Gira interamente sul computer dell'utente. Non è un servizio: nessun dato raggiunge
-gli autori, nessun server, nessuna telemetria.
+gli autori, nessun server, nessuna telemetria, nessun aggiornamento automatico. Le prove di questa
+affermazione, e i loro limiti, sono in `docs/VERIFICA-OFFLINE.md`.
 
 ## 2. Chi è responsabile dei dati
 

@@ -176,6 +176,14 @@ modelli in `models/<versione>/`, artefatti dei run in `experiments/<run>/`, doc 
   anteprima e di `add_redact_annot`, rotazione inclusa: nessuna matrice lato client); pixel
   cancellati con `PDF_REDACT_IMAGE_PIXELS`, grafica vettoriale intatta. Dizionario vuoto ammesso
   solo con riquadri. Validazione in `parse_manual_boxes` (clamp, max 500, degeneri scartati).
+- **Offline dimostrato, non dichiarato**: in testa ad `app.py` le variabili `HF_HUB_OFFLINE`/
+  `TRANSFORMERS_OFFLINE`/`HF_HUB_DISABLE_TELEMETRY`/`DO_NOT_TRACK` (setdefault **prima** degli
+  import pesanti: quelle librerie le leggono all'import); `@app.after_request` manda CSP
+  (`connect-src 'self'`) + `no-store` **imposto** (⚠️ `send_file` ne mette uno suo: con
+  `setdefault` le PNG delle pagine restavano cacheabili). Prove: `tests/test_no_egress.py`
+  (AST, non stringhe), `tests/test_claims.py` (lint dei claim pubblici),
+  `src/app/smoke_offline.py` (22 endpoint con `socket.connect` bloccato). Campagna e limiti
+  in `docs/VERIFICA-OFFLINE.md`.
 - `serve.py` — entry **headless** (solo Flask, niente browser): è il backend dell'app Tauri; log su
   `%LOCALAPPDATA%\anonimai\backend.log`. Pre-check porta + `sys.exit(76)` se occupata.
   `desktop_app.py` — entry PyInstaller legacy (apre il browser); stesso pre-check.

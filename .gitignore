@@ -47,3 +47,8 @@ Thumbs.db
 # guscio Electron di sviluppo
 node_modules/
 electron/node_modules/
+
+# Scaricati dall'UI durante le prove: il dizionario contiene PII in chiaro,
+# il rapporto no — ma nessuno dei due appartiene al repository.
+/dizionario_anonimizzazione.json
+/rapporto_anonimizzazione.json

@@ -75,7 +75,9 @@ di garanzia, obbligo di rilettura).
 ## 6. Che cosa protegge l'autore del software (non il titolare)
 
 L'autore non tratta dati: la nLPD non lo riguarda. Restano le dichiarazioni e i difetti taciuti.
-Misure in atto: nessun claim di conformità (tagline «nessun dato esce», badge «by design»);
+Misure in atto: nessun claim di conformità (tagline «nessun dato esce», badge «by design»,
+lint automatico che impedisce a un claim di rientrare — `tests/test_claims.py`); la campagna di
+verifica dell'assenza di telemetria, con i suoi limiti dichiarati (`docs/VERIFICA-OFFLINE.md`);
 `TERMS.md` mostrato al primo avvio e sempre in ⚙️ → Condizioni; `SECURITY.md` con tempi e
 versioni supportate; limiti noti nel CHANGELOG; banner quando il server è esposto; `.sha256`
 accanto ai binari; nessuna chiamata di rete, nemmeno per gli aggiornamenti. Ciò che nessuna

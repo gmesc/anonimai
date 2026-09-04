@@ -266,3 +266,18 @@ con shortcut nel menu Start e disinstallazione.
   (consigliato solo dopo che tutto funziona).
 - **SmartScreen**: un exe non firmato mostra l'avviso "editore sconosciuto". Per la distribuzione
   serve un certificato di code signing.
+
+## Impronte dei binari (SHA-256)
+
+L'installer Windows riceve il suo `.sha256` dal workflow (`build-windows.yml`, allegato alla
+release accanto all'`.exe`). Gli altri binari si costruiscono a mano, quindi le impronte si
+generano prima di allegarli:
+
+```bash
+scripts/checksums.sh dist/AnonimAI-*.dmg dist/AnonimAI-*.AppImage dist/AnonimAI-*.deb
+scripts/checksums.sh --check dist/AnonimAI-2.0.0-macOS-arm64.dmg    # verifica
+```
+
+Vanno allegati alla release **insieme** ai binari: sono ciò che permette a chi scarica di
+accorgersi se il file è stato manomesso lungo la strada. Chi verifica usa
+`shasum -a 256 -c <file>.sha256` (macOS/Linux) o `Get-FileHash <file>` (Windows).

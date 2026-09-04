@@ -57,10 +57,25 @@ import time
 from collections import OrderedDict
 from pathlib import Path
 
+# --- fork gmesc/anonimai: offline PER COSTRUZIONE (invariante 1) --------------
+# Va PRIMA di importare torch/transformers/huggingface_hub: quelle librerie leggono
+# queste variabili al momento dell'import, non alla chiamata. Con il modello gia' su
+# disco nessuna di loro dovrebbe cercare la rete, ma "non dovrebbe" non e' una prova:
+# qui la ricerca e' spenta per configurazione, e un tentativo di download diventa un
+# errore invece di una connessione silenziosa. setdefault e non "=": chi sviluppa la
+# pipeline di training puo' ancora scavalcarle dall'ambiente.
+# DO_NOT_TRACK e HF_HUB_DISABLE_TELEMETRY spengono le statistiche d'uso di HF.
+for _k, _v in (("HF_HUB_OFFLINE", "1"), ("TRANSFORMERS_OFFLINE", "1"),
+               ("HF_HUB_DISABLE_TELEMETRY", "1"), ("DO_NOT_TRACK", "1"),
+               ("HF_HUB_DISABLE_IMPLICIT_TOKEN", "1")):
+    os.environ.setdefault(_k, _v)
+# -----------------------------------------------------------------------------
+
 import fitz  # PyMuPDF
 import torch
 from flask import (Flask, jsonify, render_template_string, request,
                    send_from_directory)
+from werkzeug.exceptions import NotFound
 
 import pdf_export
 import server_config
@@ -500,6 +515,43 @@ def _page():
     return PAGE.replace("__VERSION__", APP_VERSION)
 
 
+# --- fork gmesc/anonimai: intestazioni di sicurezza su OGNI risposta ----------
+# La UI vive dentro questo file e la finestra Tauri punta a un URL http esterno:
+# la CSP di tauri.conf.json non si applica alla pagina, quindi la deve mandare il
+# server. `connect-src 'self'` e' la parte che conta: e' il browser a impedire, per
+# forza propria, che un qualunque script della pagina parli con un host esterno.
+# `no-store` e' l'invariante 6 esteso alla cache del browser: senza, la WebView
+# scrive su disco le PNG delle pagine di un documento e le risposte di /analyze,
+# che sono dati personali quanto il documento stesso.
+CSP = ("default-src 'self'; "
+       "connect-src 'self'; "
+       "img-src 'self' data: blob:; "
+       "script-src 'self' 'unsafe-inline'; "     # la UI e' inline in questo file
+       "style-src 'self' 'unsafe-inline'; "
+       "font-src 'self'; "
+       "media-src 'none'; object-src 'none'; frame-src 'none'; "
+       "form-action 'none'; base-uri 'none'; frame-ancestors 'none'")
+
+
+@app.after_request
+def _security_headers(resp):
+    resp.headers.setdefault("Content-Security-Policy", CSP)
+    # no-store si IMPONE, non si propone: send_file() mette gia' un Cache-Control
+    # con max-age e un setdefault lo lascerebbe passare. Guasto trovato dalla prova
+    # dinamica (smoke_offline): le PNG di /doc/<id>/page/N.png — che sono le pagine
+    # del documento, PII comprese — venivano servite cacheabili e la WebView le
+    # scriveva su disco. L'invariante 6 vale anche per la cache del browser.
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, private"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resp.headers.setdefault("Referrer-Policy", "no-referrer")
+    resp.headers.setdefault("X-Frame-Options", "DENY")
+    resp.headers.setdefault("Cross-Origin-Opener-Policy", "same-origin")
+    resp.headers.setdefault("Permissions-Policy",
+                            "geolocation=(), camera=(), microphone=(), interest-cohort=()")
+    return resp
+
+
 @app.route("/")
 def index():
     return _page()
@@ -507,9 +559,14 @@ def index():
 
 @app.route("/assets/<path:fn>")
 def assets(fn):
-    if os.path.isfile(os.path.join(ASSETS_DIR, fn)):
+    # send_from_directory sanifica il percorso da solo (safe_join): il file esce per
+    # forza da ASSETS_DIR. Il vecchio os.path.isfile(os.path.join(...)) faceva prima
+    # uno stat su un percorso NON sanificato — mai sfruttabile qui perche' Werkzeug
+    # normalizza gia' l'URL, ma era un controllo che poteva guardare fuori.
+    try:
         return send_from_directory(ASSETS_DIR, fn)
-    return ("", 404)
+    except NotFound:
+        return ("", 404)
 
 
 @app.route("/favicon.ico")
@@ -802,9 +859,10 @@ def doc_page(doc_id, n):
     png = _page_png(d, n, dpi)
     if png is None:
         return ("", 404)
-    resp = app.response_class(png, mimetype="image/png")
-    resp.headers["Cache-Control"] = "private, max-age=600"
-    return resp
+    # Nessun Cache-Control qui: lo impone _security_headers a no-store per TUTTE le
+    # risposte. Queste PNG sono le pagine del documento — dati personali quanto il
+    # documento — e non devono finire nella cache su disco della WebView (inv. 6).
+    return app.response_class(png, mimetype="image/png")
 
 
 @app.route("/doc/<doc_id>/file.pdf")

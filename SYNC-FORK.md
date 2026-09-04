@@ -13,6 +13,9 @@ singole righe marcate `# fork` / `# --- fork gmesc/anonimai ---`.
 | `tests/fixtures_ticino.jsonl` + `tests/test_fixture_ticino.py` | fixture sintetica ticinese: copertura dei formati CH |
 | `docs/CONFORMITA-CH.md` | mappa nLPD/LPDP → funzioni dell'app → compiti del titolare |
 | `TERMS.md`, `SECURITY.md` | condizioni d'uso (versionate per data, stesso testo in app) e policy di sicurezza |
+| `tests/test_no_egress.py`, `tests/test_claims.py` | prove anti-telemetria (AST) e lint delle dichiarazioni pubbliche |
+| `src/app/smoke_offline.py`, `docs/VERIFICA-OFFLINE.md` | prova dinamica con la rete bloccata e rendiconto della campagna |
+| `scripts/checksums.sh` | impronte SHA-256 dei binari costruiti a mano |
 | `SYNC-FORK.md` | questo file |
 
 Agganci dentro i file di upstream (piccoli, cercali con `grep -n fork src/app/app.py`):
@@ -23,7 +26,8 @@ la sezione «Cornice legale in Svizzera» nella scheda Sicurezza; `DOC_TTL` + `_
 (TTL dei documenti in RAM); il checkbox «💾 ricorda» + `saveMap()`/`setPersist()` (dizionario
 in sessionStorage per default); il bottone 📋 Rapporto (`dlrep`, i18n `dlrep`/`tip_rep`/`t_rep_ok`); scheda «Condizioni»
 (`stTerms`/`setTerms`, `terms_body`), overlay primo avvio (`termsOverlay`, `TERMS_VERSION`,
-`pii_terms_ack`), banner `#netWarn` (`net_warn`); tagline «nessun dato esce» (anche `tauri/ui/index.html`).
+`pii_terms_ack`), banner `#netWarn` (`net_warn`); tagline «nessun dato esce» (anche `tauri/ui/index.html`); il blocco delle variabili offline in
+testa ad `app.py` e `_security_headers` (CSP + `no-store`).
 
 ## Come si aggiorna (cherry-pick, NON merge del suo main intero)
 

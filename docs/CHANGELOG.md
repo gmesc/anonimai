@@ -5,6 +5,53 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-04 — «in locale» dimostrato invece che dichiarato: CSP, prove anti-egress, catena di fornitura
+
+I tre modi in cui una responsabilità per **dolo** può ricadere sull'autore di un tool offline
+sono: dichiarare il falso, lasciare un canale che fa uscire dati, distribuire un binario
+manomesso. Tutti e tre erano coperti da promesse (README, invariante 1) e da nessuna prova.
+
+- **Offline per costruzione** (`app.py`, in testa al file): `HF_HUB_OFFLINE`,
+  `TRANSFORMERS_OFFLINE`, `HF_HUB_DISABLE_TELEMETRY`, `DO_NOT_TRACK`,
+  `HF_HUB_DISABLE_IMPLICIT_TOKEN` con `setdefault` **prima** di importare torch/transformers
+  (quelle librerie le leggono all'import). Un download diventa un errore, non una connessione
+  silenziosa; la telemetria di Hugging Face è spenta.
+- **Intestazioni di sicurezza su ogni risposta** (`@app.after_request`): CSP con
+  `connect-src 'self'`, `object-src 'none'`, `base-uri 'none'`, `frame-ancestors 'none'`, più
+  `no-store`, `nosniff`, `no-referrer`, `DENY`. La finestra Tauri punta a un URL http, quindi
+  la CSP di `tauri.conf.json` **non** si applica alla pagina: la deve mandare il server. Provato
+  nel browser: fetch, WebSocket, sendBeacon e immagini verso l'esterno **bloccati dal motore**,
+  `data:`/`blob:` interni funzionanti.
+- ⚠️ **`no-store` si impone, non si propone**: `send_file()` mette già un `Cache-Control` e un
+  `setdefault` lo lasciava passare. Le PNG di `/doc/<id>/page/N.png` — le pagine del documento,
+  PII comprese — erano **cacheabili su disco** dalla WebView. Trovato dalla prova dinamica, non
+  a occhio. L'invariante 6 vale anche per la cache del browser.
+- **`tests/test_no_egress.py`** (10 prove, senza modello): vieta import di rete, `fetch` non
+  relative, `sendBeacon`/`WebSocket`/`XHR`, risorse esterne, updater, client HTTP in Rust, e
+  verifica che il blocco offline preceda gli import pesanti. ⚠️ **Due prove, al primo giro,
+  erano vacue**: cercavano una sottostringa (`HF_HUB_OFFLINE_X` la conteneva) e trovavano la
+  direttiva CSP **in un commento**. Riscritte sull'**AST**. Il metodo: 10 violazioni iniettate
+  una per volta, tutte devono far diventare rossa la suite.
+- **`tests/test_claims.py`**: lint delle dichiarazioni pubbliche (UI, README, sito, splash,
+  TERMS). Vieta «compliant», «certificato», «garantisce», «100% sicuro», e **pretende** che i
+  limiti restino scritti e che lo 0,989 sia attribuito al benchmark italiano **accanto** al
+  numero. Ha trovato tre metriche non attribuite (badge del README, tabella dei risultati,
+  statistica del sito), ora corrette.
+- **`src/app/smoke_offline.py`**: `socket.connect` sostituito da una versione che lancia su
+  qualunque indirizzo non-loopback, poi 22 endpoint esercitati col modello vero — testo, PDF
+  nativo, scansione con OCR, riquadri manuali, anteprime a 110 e 220 dpi. Esito: 22/22, zero
+  tentativi di connessione.
+- **Catena di fornitura**: `pip-audit` in CI (job dedicato) e nel build Windows
+  sull'ambiente che finisce davvero nell'installer; Action GitHub pinnate al **commit**, non al
+  tag mobile; `scripts/checksums.sh` per le impronte di `.dmg`/`.AppImage`/`.deb` (l'`.exe` la
+  riceve dal workflow). Nessuna vulnerabilità nota nel freeze al 4 settembre 2026.
+- **Audit delle superfici**: `/assets` passa ora solo da `send_from_directory` (che sanifica);
+  il precedente `os.path.isfile(os.path.join(...))` faceva `stat` su un percorso non
+  sanificato. Traversal, metodi non previsti e corpo oltre 50 MB provati: nessuna fuga.
+- **`docs/VERIFICA-OFFLINE.md`**: la campagna con i comandi, gli esiti e — soprattutto — le
+  **dodici cose che non sono state verificate** (Windows, Tauri, Electron, WebView native,
+  Docker, la scadenza attesa a orologio, il checksum della tessera d'assicurato…).
+
 ## 2026-09-04 — distribuire senza claim: condizioni d'uso, tagline, banner rete, checksum delle release
 
 Dopo la mappa nLPD/LPDP la domanda era: che cosa espone l'autore di un tool offline? Non il

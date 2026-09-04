@@ -18,7 +18,7 @@
 <img src="https://img.shields.io/badge/params-%E2%89%880.3B-blue" alt="0.3B parameters" />
 <img src="https://img.shields.io/badge/RAM-~0.5%20GB%20·%20CPU-blue" alt="0.5 GB RAM CPU" />
 <img src="https://img.shields.io/badge/PII%20categories-22-blue" alt="22 PII categories" />
-<img src="https://img.shields.io/badge/micro--F1-0.989-brightgreen" alt="0.989 micro-F1" />
+<img src="https://img.shields.io/badge/micro--F1-0.989%20(IT%20benchmark)-brightgreen" alt="0.989 micro-F1 on the Italian benchmark" />
 <img src="https://img.shields.io/badge/offline-no%20API%20key-brightgreen" alt="offline, no API key" />
 </p>
 
@@ -129,7 +129,10 @@ surrendering data**, built so the privacy guarantee is structural rather than a 
 
 - **The data never leaves the device.** Detection and re-identification run locally on a CPU.
   No API key, no telemetry, no upload, **no automatic updates**: the app never contacts a server,
-  ours included. What the cloud receives is already stripped of identifiers.
+  ours included. What the cloud receives is already stripped of identifiers. This is *tested*, not
+  claimed: a static no-egress suite, a run with `socket.connect` blocked, a system sandbox with the
+  network denied, and a `connect-src 'self'` CSP the browser itself enforces — full campaign, and
+  what it does **not** cover, in **[docs/VERIFICA-OFFLINE.md](docs/VERIFICA-OFFLINE.md)**.
 - **GDPR by design.** The workflow implements **data minimization** (Art. 5) almost literally:
   the third-party processor only ever sees pseudonymized text, so the most common reason a cloud
   LLM call is unlawful (transferring identifiable data to a third party without a basis) is removed
@@ -250,7 +253,8 @@ over-fitting** — a second epoch would very likely push it lower still.
 </div>
 <p align="center"><sub><b>Left:</b> training loss (smoothed zoom) — fast drop, then low and stable. <b>Right:</b> validation loss — monotone, still decreasing when training stopped.</sub></p>
 
-On the 7,000-row held-out **real Italian** benchmark (`validation_real.jsonl`):
+On the 7,000-row held-out **real Italian** benchmark (`validation_real.jsonl`) — an Italian
+validation, not a measure of the Swiss/Ticino profile:
 
 | 0.987 | 0.990 | 0.989 | 0.998 |
 |:---:|:---:|:---:|:---:|
@@ -308,8 +312,9 @@ The desktop app **AnonimAI** (Tauri) launches the Python/Flask backend as a bund
 "sidecar"; a CPU-only PyTorch build keeps it fully **offline** on Windows (WebView2), macOS and Linux.
 Packaging instructions in **[docs/BUILD.md](docs/BUILD.md)**.
 
-> **⬇️ Download.** Verify the `.sha256` file published next to each binary before installing
-> (`shasum -a 256 <file>` / `Get-FileHash <file>`). Grab the ready-to-use build from the
+> **⬇️ Download.** Verify the `.sha256` published next to each binary before installing:
+> `shasum -a 256 -c <file>.sha256` on macOS/Linux, `Get-FileHash <file>` on Windows
+> (`scripts/checksums.sh` generates and checks them). Grab the ready-to-use build from the
 > **[Releases page](https://github.com/Rizzo-AI-Academy/rizzo-pii/releases/latest)** — no Python or
 > setup required: a **Windows installer** (double-click), a **macOS `.dmg`** (Apple Silicon /
 > arm64 — **signed & notarized** by Apple, just open it), and a **Linux AppImage** (`chmod +x` then
