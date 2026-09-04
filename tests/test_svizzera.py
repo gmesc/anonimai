@@ -95,6 +95,83 @@ class TestTargaSvizzera(unittest.TestCase):
         self.assertEqual(found, set())
 
 
+class TestAvsNonDiventaCarta(unittest.TestCase):
+
+    def test_avs_che_supera_luhn_resta_id_doc(self):
+        # 756.1000.0000.61 passa EAN-13 e per caso anche Luhn: la regex della carta
+        # lo vede. I detector CH stanno in testa, quindi in _merge (sort stabile)
+        # ID_DOC vince il pareggio. Qui si verifica il presupposto: ordine in DETECTORS.
+        self.assertTrue(dl.avs_ok("756.1000.0000.61"))
+        self.assertTrue(dt.luhn_ok("756.1000.0000.61"))
+        found = [e["label"] for e in dt.detect_regex("AVS 756.1000.0000.61")
+                 if e["start"] == 4]
+        self.assertEqual(found[0], "ID_DOC")
+        self.assertIs(dt.DETECTORS[0], dl.SWISS_DETECTORS[0])
+
+
+class TestIdi(unittest.TestCase):
+
+    def test_checksum(self):
+        self.assertTrue(dl.idi_ok("CHE-105.805.649"))       # IDI pubblico
+        self.assertFalse(dl.idi_ok("CHE-105.805.640"))
+        self.assertFalse(dl.idi_ok("CHE-105.805"))
+
+    def test_piva_con_suffisso_iva(self):
+        found = labels("IDI CHE-105.805.649 IVA della ditta")
+        self.assertIn(("PIVA", "CHE-105.805.649 IVA"), found)
+
+    def test_checksum_errato_redatto_senza_spunta(self):
+        ents = [e for e in dt.detect_regex("CHE-105.805.640") if e["label"] == "PIVA"]
+        self.assertEqual(len(ents), 1)
+        self.assertFalse(ents[0]["validated"])
+
+
+class TestTelefonoSvizzero(unittest.TestCase):
+
+    def test_forme(self):
+        for tel in ("+41 91 123 45 67", "091 123 45 67", "079 123 45 67",
+                    "+41 (0)91 234 56 78", "0041 79 123 45 67"):
+            self.assertIn(("TELEPHONENUM", tel), labels(f"tel. {tel} ok"), tel)
+
+    def test_numero_italiano_ancora_visto(self):
+        self.assertIn(("TELEPHONENUM", "010-2471234"), labels("tel 010-2471234"))
+
+
+class TestImportiChf(unittest.TestCase):
+
+    def test_forme(self):
+        for amt in ("CHF 1'250.00", "Fr. 12'500.–", "3'000 franchi", "250.00 CHF", "CHF 500"):
+            self.assertIn(("AMOUNT", amt), labels(f"importo {amt} pagato"), amt)
+
+    def test_euro_intatto(self):
+        self.assertIn(("AMOUNT", "€ 12.500,00"), labels("costo € 12.500,00 iva"))
+
+
+class TestCatastoTicinese(unittest.TestCase):
+
+    def test_mappale_rfd(self):
+        found = labels("mappale n. 1234 RFD Lugano; fondo n. 567 RFD di Bellinzona")
+        self.assertIn(("CATASTO", "mappale n. 1234 RFD Lugano"), found)
+        self.assertIn(("CATASTO", "fondo n. 567 RFD di Bellinzona"), found)
+
+    def test_fondo_parola_comune_non_matcha(self):
+        found = labels("in fondo alla via 3, il fondo 12 e' vuoto")
+        self.assertFalse(any(l == "CATASTO" for l, _ in found))
+
+
+class TestTesseraAssicurato(unittest.TestCase):
+
+    def test_20_cifre_prefisso_80756(self):
+        ents = [e for e in dt.detect_regex("tessera 80756123456789012345 cassa")
+                if e["label"] == "ID_DOC"]
+        self.assertEqual(len(ents), 1)
+        self.assertFalse(ents[0]["validated"])     # solo forma, niente spunta
+
+    def test_non_dentro_numero_piu_lungo(self):
+        found = labels("n. 980756123456789012345")
+        self.assertFalse(any(l == "ID_DOC" for l, _ in found))
+
+
 class TestTerminiPersonali(unittest.TestCase):
 
     TERMS = [{"value": "Istituto Elvetico", "tag": "ORG"},

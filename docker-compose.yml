@@ -23,7 +23,9 @@ services:
     ports:
       # Solo localhost: l'app processa documenti con dati personali,
       # il confine di rete lo mette docker. Togli "127.0.0.1:" solo
-      # se ti serve davvero raggiungerla dalla LAN.
+      # se ti serve davvero raggiungerla dalla LAN: da quel momento offri
+      # un SERVIZIO a terzi (i loro documenti passano da qui), sei tu il
+      # responsabile di quel flusso e vale il §13 AGPL. Accesso autenticato.
       - "127.0.0.1:5005:5005"
 
     environment:

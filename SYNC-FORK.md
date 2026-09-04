@@ -8,15 +8,22 @@ singole righe marcate `# fork` / `# --- fork gmesc/anonimai ---`.
 
 | File | Che cosa contiene |
 |---|---|
-| `src/app/detectors_local.py` | profilo Svizzera (AVS/Cantoni/NAP/targa CH) + Termini personali + persistenza della chiave `custom_terms` in prefs.json |
+| `src/app/detectors_local.py` | profilo Svizzera (AVS/IDI/Cantoni/NAP/targa/telefono/CHF/mappale RFD/tessera) + Termini personali + persistenza della chiave `custom_terms` in prefs.json |
 | `tests/test_svizzera.py` | le prove di tutto quanto sopra (girano senza modello) |
+| `tests/fixtures_ticino.jsonl` + `tests/test_fixture_ticino.py` | fixture sintetica ticinese: copertura dei formati CH |
+| `docs/CONFORMITA-CH.md` | mappa nLPD/LPDP → funzioni dell'app → compiti del titolare |
+| `TERMS.md`, `SECURITY.md` | condizioni d'uso (versionate per data, stesso testo in app) e policy di sicurezza |
 | `SYNC-FORK.md` | questo file |
 
 Agganci dentro i file di upstream (piccoli, cercali con `grep -n fork src/app/app.py`):
 import + `install()` + `swissify_tags()` + `load/save_custom_terms()` +
 `match_custom_terms()` in `app.py`; la riga `source == "utente"` in `_merge`;
 il blocco `custom_terms` in `/settings`; sezione 📌 nella UI (CSS/markup/JS/i18n);
-una voce nella scheda Sicurezza.
+la sezione «Cornice legale in Svizzera» nella scheda Sicurezza; `DOC_TTL` + `_sweep_docs`
+(TTL dei documenti in RAM); il checkbox «💾 ricorda» + `saveMap()`/`setPersist()` (dizionario
+in sessionStorage per default); il bottone 📋 Rapporto (`dlrep`, i18n `dlrep`/`tip_rep`/`t_rep_ok`); scheda «Condizioni»
+(`stTerms`/`setTerms`, `terms_body`), overlay primo avvio (`termsOverlay`, `TERMS_VERSION`,
+`pii_terms_ack`), banner `#netWarn` (`net_warn`); tagline «nessun dato esce» (anche `tauri/ui/index.html`).
 
 ## Come si aggiorna (cherry-pick, NON merge del suo main intero)
 

@@ -1,0 +1,32 @@
+{"note": "AVS con checksum EAN-13 valido", "text": "Il paziente, n. AVS 756.9217.0769.85, domiciliato a Locarno.", "expect": [["ID_DOC", "756.9217.0769.85"]]}
+{"note": "AVS compatto", "text": "AVS 7569217076985 registrato.", "expect": [["ID_DOC", "7569217076985"]]}
+{"note": "AVS con checksum errato resta in chiaro (voluto)", "text": "AVS 756.9217.0769.80 errato.", "absent": [["ID_DOC", "756.9217.0769.80"]]}
+{"note": "IDI con suffisso IVA", "text": "La ditta Alfa SA, IDI CHE-123.456.788 IVA, con sede a Lugano.", "expect": [["PIVA", "CHE-123.456.788 IVA"]]}
+{"note": "IDI senza suffisso e con spazi", "text": "UID CHE 123 456 788 del registro di commercio.", "expect": [["PIVA", "CHE 123 456 788"]]}
+{"note": "IBAN svizzero a gruppi", "text": "Bonifico su IBAN CH93 0076 2011 6238 5295 7 presso Banca Stato.", "expect": [["IBAN", "CH93 0076 2011 6238 5295 7"]]}
+{"note": "IBAN svizzero compatto", "text": "IBAN CH9300762011623852957 intestato.", "expect": [["IBAN", "CH9300762011623852957"]]}
+{"note": "NAP + localita' ticinese", "text": "Via Nassa 5, 6900 Lugano", "expect": [["ZIPCODE", "6900"]]}
+{"note": "NAP con prefisso CH", "text": "recapito CH-6500 Bellinzona", "expect": [["ZIPCODE", "CH-6500"]]}
+{"note": "NAP 6600 Locarno", "text": "residente in 6600 Locarno", "expect": [["ZIPCODE", "6600"]]}
+{"note": "anno non e' un NAP", "text": "nel 2019 Marco si e' trasferito", "absent": [["ZIPCODE", "2019"]]}
+{"note": "cantone per nome", "text": "domiciliato in Ticino dal 2010", "expect": [["PROVINCE", "Ticino"]]}
+{"note": "Canton + nome", "text": "l'Ufficio del Canton Ticino ha risposto", "expect": [["PROVINCE", "Canton Ticino"]]}
+{"note": "Cantone Uri via prefisso", "text": "trasferito nel Cantone Uri", "expect": [["PROVINCE", "Cantone Uri"]]}
+{"note": "targa TI", "text": "veicolo targato TI 123456 parcheggiato", "expect": [["TARGA", "TI 123456"]]}
+{"note": "targa GR con trattino", "text": "auto GR-45678 in sosta", "expect": [["TARGA", "GR-45678"]]}
+{"note": "targa minuscola e' prosa", "text": "ti 123456 lo dico", "absent": [["TARGA", "ti 123456"]]}
+{"note": "telefono fisso ticinese", "text": "tel. 091 123 45 67 (segreteria)", "expect": [["TELEPHONENUM", "091 123 45 67"]]}
+{"note": "cellulare +41", "text": "cell. +41 79 123 45 67", "expect": [["TELEPHONENUM", "+41 79 123 45 67"]]}
+{"note": "telefono con (0)", "text": "Tel. +41 (0)91 234 56 78", "expect": [["TELEPHONENUM", "+41 (0)91 234 56 78"]]}
+{"note": "telefono 0041", "text": "chiamare 0041 91 123 45 67", "expect": [["TELEPHONENUM", "0041 91 123 45 67"]]}
+{"note": "importo CHF con apostrofo", "text": "onorario di CHF 1'250.00 piu' IVA", "expect": [["AMOUNT", "CHF 1'250.00"]]}
+{"note": "importo Fr. tondo", "text": "pigione Fr. 12'500.– annui", "expect": [["AMOUNT", "Fr. 12'500.–"]]}
+{"note": "importo in franchi dopo la cifra", "text": "risarcimento di 3'000 franchi", "expect": [["AMOUNT", "3'000 franchi"]]}
+{"note": "importo euro intatto", "text": "spesa di € 12.500,00 documentata", "expect": [["AMOUNT", "€ 12.500,00"]]}
+{"note": "mappale RFD", "text": "il fondo sito al mappale n. 1234 RFD Lugano", "expect": [["CATASTO", "mappale n. 1234 RFD Lugano"]]}
+{"note": "fondo n. RFD di", "text": "fondo n. 567 RFD di Bellinzona, sezione Daro", "expect": [["CATASTO", "fondo n. 567 RFD di Bellinzona"]]}
+{"note": "particella senza RFD", "text": "particella n. 89 del Comune di Mendrisio", "expect": [["CATASTO", "particella n. 89"]]}
+{"note": "fondo parola comune", "text": "in fondo alla via 3 c'e' il fondo 12", "absent": [["CATASTO", "fondo 12"]]}
+{"note": "tessera assicurato 80756", "text": "tessera n. 80756123456789012345 della cassa malati", "expect": [["ID_DOC", "80756123456789012345"]]}
+{"note": "repertorio notarile (DOCID upstream)", "text": "atto Rep. n. 4521/2024 del notaio", "expect": [["DOCID", "Rep. n. 4521/2024"]]}
+{"note": "data svizzera con punti", "text": "in data 4.9.2026 le parti", "expect": [["DATE", "4.9.2026"]]}

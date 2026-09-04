@@ -35,6 +35,18 @@ def avs_ok(s):
     return (10 - tot % 10) % 10 == int(d[12])
 
 
+def idi_ok(s):
+    """IDI/UID svizzero (CHE-123.456.789): 9 cifre, l'ultima e' un checksum
+    mod-11 con pesi 5,4,3,2,7,6,5,4 sulle prime 8 (resto 10 -> numero non valido).
+    Verificato su un IDI pubblico: CHE-105.805.649."""
+    d = re.sub(r"\D", "", s)
+    if len(d) != 9:
+        return False
+    r = sum(int(c) * w for c, w in zip(d[:8], (5, 4, 3, 2, 7, 6, 5, 4))) % 11
+    chk = (11 - r) % 11
+    return r != 1 and chk == int(d[8])
+
+
 SWISS_DETECTORS = [
     ("ID_DOC",
      re.compile(r"(?<!\d)756[.\s]?\d{4}[.\s]?\d{4}[.\s]?\d{2}(?!\d)"),
@@ -70,17 +82,57 @@ SWISS_DETECTORS = [
      re.compile(r"\b(?:AG|AI|AR|BE|BL|BS|FR|GE|GL|GR|JU|LU|NE|NW|OW|SG|SH|SO"
                 r"|SZ|TG|TI|UR|VD|VS|ZG|ZH)[ \-]\d{3,6}\b"),
      None, True),
+    # IDI/UID delle imprese (CHE-123.456.789, con eventuale suffisso IVA/MWST/TVA):
+    # e' la P.IVA svizzera, quindi PIVA. strict=False come il CF: la forma col
+    # prefisso CHE e' inequivocabile, si redige comunque; il ✓ solo col checksum.
+    ("PIVA",
+     re.compile(r"\bCHE[-\s]?\d{3}[.\s]?\d{3}[.\s]?\d{3}(?:\s?(?:IVA|MWST|TVA))?\b"),
+     idi_ok, False),
+    # Telefono svizzero: +41 / 0041 / 0xx + 3-2-2 ("091 123 45 67", "079 123 45 67").
+    # La regex italiana di upstream vuole 5-8 cifre attaccate dopo il prefisso e
+    # non vede la forma spezzata svizzera. Il "(0)" dopo +41 e' usuale sulle carte
+    # intestate: "+41 (0)91 ...".
+    ("TELEPHONENUM",
+     re.compile(r"(?<![\w.])(?:(?:\+|00)41[\s.\-]?(?:\(0\)\s?)?\d{2}|0\d{2})"
+                r"[\s.\-]?\d{3}[\s.\-]?\d{2}[\s.\-]?\d{2}(?!\w)"),
+     None, True),
+    # Importi in franchi: "CHF 1'250.00", "Fr. 12'500.–", "3'000 franchi". Le migliaia
+    # in Svizzera si separano con l'apostrofo (dritto o tipografico), i decimali col
+    # punto, e il "–" chiude gli importi tondi.
+    ("AMOUNT",
+     re.compile(r"(?:CHF|SFr\.?|Fr\.|franchi|francs?|franken)\s?"
+                r"\d{1,3}(?:['’.]\d{3})*(?:[.,]\d{2}|[.,]?[–\-])?"
+                r"|\d{1,3}(?:['’.]\d{3})*(?:[.,]\d{2}|[.,]?[–\-])?\s?"
+                r"(?:CHF|SFr\.?|Fr\.|franchi|francs?|franken)\b", re.IGNORECASE),
+     None, True),
+    # Catasto ticinese: il fondo si cita come "mappale n. 1234 RFD Lugano" (Registro
+    # fondiario definitivo; RFP = provvisorio). "particella"/"part." vale anche qui.
+    # "fondo" da solo e' una parola comune ("in fondo alla via"): lo si accetta solo
+    # con "n."/"no."/"nr." esplicito.
+    ("CATASTO",
+     re.compile(r"\b(?:mappal[ei]|mapp\.|particell[ae]|part\.|fond[oi]\s+(?=n[or]?\.))"
+                r"\s*(?:n[or]?\.?\s*)?\d{1,6}(?:\s*,?\s*(?:n[or]?\.?\s*)?\d{1,6})*"
+                r"(?:\s+RF[DP]\s+(?:di\s+)?[A-ZÀ-Ü][\wà-ü'\-]+)?", re.IGNORECASE),
+     None, True),
+    # Tessera d'assicurato (cassa malati): 20 cifre, prefisso fisso 80756. Solo forma:
+    # non garantisco la cifra di controllo, quindi nessun validatore (niente ✓).
+    ("ID_DOC",
+     re.compile(r"(?<!\d)80756\d{15}(?!\d)"),
+     None, True),
 ]
 
 _installed = False
 
 
 def install():
-    """Appende i detector CH a detectors.DETECTORS (idempotente): detect_regex
-    li usa da subito, senza modificare il file di upstream."""
+    """Mette i detector CH in TESTA a detectors.DETECTORS (idempotente): detect_regex
+    li usa da subito, senza modificare il file di upstream. In testa e non in coda
+    perche' _merge ordina con sort stabile: a parita' di priorita' vince chi viene
+    prima, e un AVS che per caso supera anche Luhn (1 su 10) deve restare ID_DOC,
+    non diventare CREDITCARDNUMBER."""
     global _installed
     if not _installed:
-        detectors.DETECTORS.extend(SWISS_DETECTORS)
+        detectors.DETECTORS[0:0] = SWISS_DETECTORS
         _installed = True
 
 
@@ -94,6 +146,15 @@ _TAG_OVERRIDES = {
                "CA12345AB · 756.1234.5678.97"),
     "TARGA": ("Targa di veicolo (anche svizzera)", "Vehicle plate (Swiss included)",
               "AB 123 CD · TI 123456"),
+    "PIVA": ("Partita IVA / IDI-UID svizzero (checksum verificato)",
+             "VAT number / Swiss UID (checksum verified)", "12345678901 · CHE-105.805.649"),
+    "TELEPHONENUM": ("Numero di telefono (anche +41)", "Phone number (+41 included)",
+                     "+39 333 1234567 · 091 123 45 67"),
+    "AMOUNT": ("Importo in denaro (€ / CHF)", "Money amount (€ / CHF)",
+               "€ 12.500,00 · CHF 1'250.00"),
+    "CATASTO": ("Dati catastali: foglio, particella, sub. / mappale RFD",
+                "Land registry data: sheet, parcel, sub. / Swiss mappale RFD",
+                "Foglio 12, part. 345 · mappale n. 1234 RFD Lugano"),
 }
 
 

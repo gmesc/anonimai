@@ -115,6 +115,11 @@ jobs:
           Write-Host "installer: $dest ($size GB)"
           "path=$dest"                        >> $env:GITHUB_OUTPUT
           "name=$(Split-Path $dest -Leaf)"    >> $env:GITHUB_OUTPUT
+          # Impronta SHA-256 accanto all'installer: chi scarica puo' verificare che il
+          # binario sia quello prodotto qui (Get-FileHash / shasum -a 256).
+          $hash = (Get-FileHash $dest -Algorithm SHA256).Hash.ToLower()
+          "$hash  $(Split-Path $dest -Leaf)" | Set-Content -NoNewline "$dest.sha256"
+          "sha=$dest.sha256"                  >> $env:GITHUB_OUTPUT
 
       # Dispatch senza release_tag: l'installer resta scaricabile dalla pagina del run
       # (solo per chi ha accesso al repo, e scade). Per la landing serve un asset di release.
@@ -139,6 +144,7 @@ jobs:
           REPO: ${{ github.repository }}
           ASSET: ${{ steps.installer.outputs.path }}
           ASSET_NAME: ${{ steps.installer.outputs.name }}
+          SHA: ${{ steps.installer.outputs.sha }}
         run: |
           set -euo pipefail
           API="https://api.github.com/repos/$REPO"
@@ -169,3 +175,12 @@ jobs:
             "https://uploads.github.com/repos/$REPO/releases/$ID/assets?name=$ASSET_NAME" \
             > upload.json
           echo "Asset: $(jq -r .browser_download_url upload.json)"
+
+          # L'impronta .sha256, stesso giro (cancella l'eventuale precedente).
+          OLD="$(curl -sS "${auth[@]}" "$API/releases/$ID/assets" \
+                 | jq -r --arg n "$ASSET_NAME.sha256" '.[] | select(.name == $n) | .id')"
+          [ -n "$OLD" ] && curl -fsS -X DELETE "${auth[@]}" "$API/releases/assets/$OLD"
+          curl -fsS -X POST "${auth[@]}" -H "Content-Type: text/plain" -T "$SHA" \
+            "https://uploads.github.com/repos/$REPO/releases/$ID/assets?name=$ASSET_NAME.sha256" \
+            > upload_sha.json
+          echo "Asset: $(jq -r .browser_download_url upload_sha.json)"

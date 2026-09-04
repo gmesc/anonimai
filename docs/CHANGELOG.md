@@ -5,6 +5,78 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-04 — distribuire senza claim: condizioni d'uso, tagline, banner rete, checksum delle release
+
+Dopo la mappa nLPD/LPDP la domanda era: che cosa espone l'autore di un tool offline? Non il
+trattamento (nessun dato lo raggiunge), ma le **dichiarazioni** e i **difetti taciuti**. Quindi:
+
+- **Via «GDPR compliant»** dalla tagline (app, splash Tauri) e badge README/sito riscritto in
+  «GDPR / nLPD by design»: «compliant» è un giudizio su un trattamento, non una proprietà del
+  software (LCSl). Al suo posto un fatto: «nessun dato esce».
+- **`TERMS.md`** (bozza da avvocato, versionata per data) + **scheda «Condizioni»** in Impostazioni +
+  **presa visione al primo avvio** per versione (`pii_terms_ack` in localStorage; dentro Tauri =
+  per installazione). Non un EULA: tre righe — titolare sei tu, il rilevamento può sbagliare,
+  nessuna garanzia. Il Rapporto registra `terms_version_accepted`, `dictionary_persisted`,
+  `served_from`.
+- **Banner «server esposto»** quando la pagina non arriva da loopback (`location.hostname`, zero
+  righe lato server): chi usa un'istanza esposta sa che i suoi documenti passano da un'altra
+  macchina e che l'operatore ne risponde. README/compose: esporre = offrire un servizio (+ §13 AGPL).
+- **`SECURITY.md`**: come segnalare in privato, tempi, una sola versione supportata, difetti non
+  correggibili dichiarati come limite noto. È la definizione operativa di «diligenza».
+- **`.sha256` accanto all'installer Windows** nel workflow di release (`Get-FileHash`), istruzione
+  di verifica nel README. Il binario manomesso con il nostro nome sopra è il rischio da
+  distribuzione più concreto; macOS resta firmato/notarizzato.
+- README: frase di posizionamento unica («strumento di supporto, il titolare sei tu, la rilettura
+  è tua»), impegno esplicito «nessun aggiornamento automatico, nessuna chiamata di rete», nota ¹
+  che attribuisce lo 0,989 al benchmark italiano e il profilo CH alla fixture.
+- Non implementabile in codice, e detto: Sagl/RC professionale se si fattura, mai ospitare
+  l'app per terzi senza contratto, validazione legale dei testi.
+
+## 2026-09-04 — profilo Ticino completo, privacy by default, rapporto di anonimizzazione (`src/app/`)
+
+Dalla rendicontazione per la scheda su insegnai.ch: la rete regex non vedeva **nessuno** dei
+formati svizzeri fuori da AVS/Cantone/NAP/targa — verificato a mano: telefoni `+41`/`091 …`,
+importi `CHF`/`Fr.`, IDI/UID, mappali RFD, tessere d'assicurato cadevano tutti sul solo
+modello, addestrato sul formato italiano. E la cornice normativa citata nell'app era solo il
+GDPR, mentre l'utente ticinese sta sotto **nLPD** (privati) o **LPDP** (enti pubblici).
+
+- **Detector CH aggiunti** (`detectors_local.py`, sempre senza retraining): **IDI/UID**
+  `CHE-123.456.789` → `PIVA` con **checksum mod-11** (pesi 5,4,3,2,7,6,5,4; verificato su un
+  IDI pubblico), `strict=False` come il CF perché il prefisso `CHE` è inequivocabile; **telefono
+  svizzero** 3-2-2 (`+41`, `0041`, `+41 (0)91`, `0xx`) → `TELEPHONENUM`; **importi in franchi**
+  con apostrofo delle migliaia e `.–` → `AMOUNT`; **catasto ticinese** `mappale n. 1234 RFD
+  Lugano` → `CATASTO` («fondo» solo con `n.` esplicito: è una parola comune); **tessera
+  d'assicurato** `80756`+15 cifre → `ID_DOC` senza validatore (nessun checksum garantito, quindi
+  niente ✓). Legenda aggiornata con il doppio identificativo anche per PIVA/telefono/importo/catasto.
+- ⚠️ **I detector CH vanno in testa a `DETECTORS`, non in coda**: `_merge` ordina con sort
+  stabile e a parità di priorità vince chi viene prima. Un AVS che per caso supera anche Luhn
+  (1 su 10, es. `756.1000.0000.61`) diventava `CREDITCARDNUMBER`: redatto comunque, ma con
+  l'etichetta sbagliata. Test dedicato.
+- **Dizionario in `sessionStorage` per default** (art. 7 nLPD, by default): muore con la
+  finestra. Prima stava in `localStorage`, cioè su disco in chiaro nel profilo della WebView,
+  oltre la sessione. Persistenza solo **opt-in** («💾 ricorda» accanto allo switch,
+  `pii_map_persist`); il cambio sposta il dizionario nello store giusto e ripulisce l'altro.
+  Un dizionario di una versione precedente in `localStorage` viene ancora letto (nessuna perdita
+  silenziosa) e sparisce al primo Pulisci o alla prossima anonimizzazione.
+- **TTL dei documenti in RAM** (`DOC_TTL = 30 min`, `_sweep_docs` a ogni accesso + thread
+  daemon ogni 60 s): la LRU da sola teneva un PDF dimenticato finché non ne arrivavano altri
+  sei. Invariante 6 rafforzato.
+- **📋 Rapporto di anonimizzazione** (client-side, `rapporto_anonimizzazione.json`): data,
+  SHA-256 dell'input, conteggi per tag e per fonte, tag esclusi, numero di Termini personali,
+  residui/saltati e riquadri del PDF, versioni app/modello. **Nessun valore**: si archivia con
+  la pratica. Serve alla documentazione richiesta agli enti sotto LPDP e al registro dello studio.
+- **Testi**: scheda Sicurezza con la sezione «Cornice legale in Svizzera» (nLPD art. 5/6/7/16-17/22,
+  LPDP per gli enti pubblici, art. 321 CP, identificabilità indiretta), IT+EN; «pseudonimizzazione
+  = dato personale» ora cita la nLPD accanto al GDPR. Nuovo `docs/CONFORMITA-CH.md`: mappa
+  articolo → funzione → cosa resta al titolare, checklist, cosa far validare al consulente.
+- **Misura onesta del profilo CH**: `tests/fixtures_ticino.jsonl` (32 frasi sintetiche, checksum
+  ricalcolati, zero PII reali) + `tests/test_fixture_ticino.py`. Copre i **formati**, non la
+  qualità del modello su atti veri: è il numero da scrivere sulla scheda al posto dello 0,989
+  italiano. Suite: 81 test verdi, senza modello.
+- Non fatto, e perché: permessi B/C/G/L (categoria semantica, non un formato: Termini
+  personali o retraining), UI in FR/DE (Ticino italofono, modello già multilingue), benchmark
+  su documenti ticinesi veri (servono i documenti).
+
 ## 2026-09-04 — profilo Svizzera/Ticino + Termini personali (`src/app/`)
 
 L'app deve servire anche il sistema svizzero (l'utente lavora su atti ticinesi) e ogni

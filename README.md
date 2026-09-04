@@ -10,7 +10,7 @@
 
 <p>
 <img src="https://img.shields.io/badge/100%25-LOCAL-7c3aed?style=for-the-badge" alt="100% local" />
-<img src="https://img.shields.io/badge/GDPR-BY%20DESIGN-7c3aed?style=for-the-badge" alt="GDPR by design" />
+<img src="https://img.shields.io/badge/GDPR%20%2F%20nLPD-BY%20DESIGN-7c3aed?style=for-the-badge" alt="GDPR / nLPD by design" />
 <img src="https://img.shields.io/badge/EU%20AI%20ACT-ALIGNED-7c3aed?style=for-the-badge" alt="EU AI Act aligned" />
 </p>
 
@@ -46,9 +46,15 @@ covers — and drives a fully **reversible** anonymization workflow:
 
 </div>
 
-It is built for law firms, accountants, notaries and anyone bound by the **GDPR** who wants to
-keep using ChatGPT / Claude / Gemini on sensitive documents **without ever sending the real data
-out**.
+It is built for law firms, accountants, notaries and anyone bound by the **GDPR** or the Swiss
+**nLPD** who wants to keep using ChatGPT / Claude / Gemini on sensitive documents **without ever
+sending the real data out**.
+
+> **What it is, in one sentence.** A *support tool* for pseudonymisation: it runs on your machine,
+> the authors never see your data, **you remain the data controller and the final human review of
+> every output is yours**. Detection is statistical and can miss values. No badge on this page is a
+> compliance certification — see [TERMS.md](TERMS.md), [SECURITY.md](SECURITY.md) and
+> [docs/CONFORMITA-CH.md](docs/CONFORMITA-CH.md) (Swiss nLPD / Ticino LPDP mapping).
 
 <table>
 <tr>
@@ -57,9 +63,14 @@ out**.
 </td>
 <td valign="middle">
 
-| ≈0.3B | ~0.5 GB | 22 | 0.989 |
+| ≈0.3B | ~0.5 GB | 22 | 0.989 ¹ |
 |:---:|:---:|:---:|:---:|
 | parameters (mmBERT-base) | RAM footprint, CPU | PII categories | micro-F1 (real IT validation) |
+
+<sub>¹ Measured on the **Italian** benchmark of the upstream model. The Swiss/Ticino profile
+(AVS, UID, CHF, `+41`, NAP, mappale RFD) is a deterministic regex+checksum net covered by unit
+tests and a synthetic fixture (`tests/fixtures_ticino.jsonl`): format coverage, not an F1 on real
+Ticino documents.</sub>
 
 The hedgehog mascot does one job: it grabs your document, blacks out every identifier, and
 **stays inside the EU** while doing it.
@@ -117,7 +128,8 @@ This is not "yet another PII detector". It is an **architecture for using powerf
 surrendering data**, built so the privacy guarantee is structural rather than a promise:
 
 - **The data never leaves the device.** Detection and re-identification run locally on a CPU.
-  No API key, no telemetry, no upload. What the cloud receives is already stripped of identifiers.
+  No API key, no telemetry, no upload, **no automatic updates**: the app never contacts a server,
+  ours included. What the cloud receives is already stripped of identifiers.
 - **GDPR by design.** The workflow implements **data minimization** (Art. 5) almost literally:
   the third-party processor only ever sees pseudonymized text, so the most common reason a cloud
   LLM call is unlawful (transferring identifiable data to a third party without a basis) is removed
@@ -296,11 +308,18 @@ The desktop app **AnonimAI** (Tauri) launches the Python/Flask backend as a bund
 "sidecar"; a CPU-only PyTorch build keeps it fully **offline** on Windows (WebView2), macOS and Linux.
 Packaging instructions in **[docs/BUILD.md](docs/BUILD.md)**.
 
-> **⬇️ Download.** Grab the ready-to-use build from the
+> **⬇️ Download.** Verify the `.sha256` file published next to each binary before installing
+> (`shasum -a 256 <file>` / `Get-FileHash <file>`). Grab the ready-to-use build from the
 > **[Releases page](https://github.com/Rizzo-AI-Academy/rizzo-pii/releases/latest)** — no Python or
 > setup required: a **Windows installer** (double-click), a **macOS `.dmg`** (Apple Silicon /
 > arm64 — **signed & notarized** by Apple, just open it), and a **Linux AppImage** (`chmod +x` then
 > run) are all available now.
+
+> **📖 User manual (Italian).** An illustrated walkthrough of the whole app — every screen, the
+> manual boxes over signatures and stamps, OCR on scans, the reversible dictionary, and a closing
+> chapter on what the app deliberately does **not** do:
+> **[docs/guida/index.html](docs/guida/index.html)** — clone the repo and open that file in a
+> browser (GitHub shows the raw HTML, not the rendered page).
 
 ---
 
@@ -336,7 +355,10 @@ machine. Inside the container the server is `gunicorn` with **1 worker** (the mo
 
 Publish the port as `127.0.0.1:5005:5005`, not `5005:5005`, unless you actually mean to expose the
 service to your LAN — inside the container the bind is `0.0.0.0` on purpose, and the network
-boundary is Docker's job.
+boundary is Docker's job. **If you do expose it, you are providing a service to other people**: their
+documents transit through your host, you are the data controller/processor for that flow, the app
+shows a warning banner to every user, and the AGPL §13 source offer applies. Put it behind
+authenticated, encrypted access.
 
 Useful knobs (all optional):
 
@@ -549,6 +571,8 @@ rizzo_pii/
 │   ├─ TASSONOMIA_TAG.md     the 22 final tags and the merge decisions
 │   ├─ BUILD.md              desktop app build (Tauri recommended + PyInstaller legacy)
 │   ├─ CHANGELOG.md          change log, with rationale
+│   ├─ guida/                illustrated user manual (IT): index.html + img/ + tools/
+│   │                        that re-shoot every screenshot from the running app
 │   └─ star_history_*.png    star chart shown below (regenerated by scripts/)
 ├─ scripts/
 │   └─ plot_star_history.py  reads the stargazers, renders docs/star_history_*.png
