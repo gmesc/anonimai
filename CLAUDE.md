@@ -96,7 +96,14 @@ modelli in `models/<versione>/`, artefatti dei run in `experiments/<run>/`, doc 
   promemoria del blocco schermo (`pii_lock_reminder_off`). **Termini
   personali** (🏷️→📌): lista `{value, tag}` in `prefs.json` (`custom_terms`, cap 200, ≥3
   alfanumerici), match letterale con confini di parola in `detectors.match_custom_terms`,
-  priorità massima in `_merge` (source `utente`), tag liberi ammessi; su `/settings` GET/POST. `APP_VERSION`. Endpoint: `GET /health` (readiness senza inference, 200/503),
+  priorità massima in `_merge` (source `utente`), tag liberi ammessi; su `/settings` GET/POST.
+  **Termini in chiaro** (🏷️→👁️, lo specchio): lista `{value, tags}` in `prefs.json` (`keep_terms`,
+  cap 200, ≥3 alfanumerici) di valori che NON vanno coperti anche se il modello li riconosce (i nomi
+  delle scale nei referti: Ritvo, Beck, Wechsler). `detectors_local.drop_keep_terms` filtra **dopo**
+  `_merge` con un **fullmatch** ("Beck" non scopre "Beckenbauer"), opzionalmente ristretto a certi
+  tag; si aggiunge col 👁️ sulle righe del dizionario (conferma + rianonimizzazione) e si toglie
+  dalla scheda 🏷️. TOGLIE protezione: il Rapporto registra `cleared_on_purpose {count, by_tag}` e
+  `keep_terms_count`, mai i valori. `APP_VERSION`. Endpoint: `GET /health` (readiness senza inference, 200/503),
   `POST /analyze`, `POST /pdf`, `POST /preview`, `POST /pdf/preview`, `GET /doc/<id>/page/<n>.png`,
   `GET /doc/<id>/file.pdf`, `DELETE /doc/<id>`, `GET/POST /settings` (alias storico `/tags`),
   `GET/POST /config`, `GET /port-check`; CLI `--host`/`--port`/`--exclude-tags`/`--no-mapping`/`--auth`.

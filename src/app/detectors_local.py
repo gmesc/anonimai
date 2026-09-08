@@ -239,6 +239,107 @@ def _read_prefs_raw() -> dict:
         return {}
 
 
+# --------------------------------------------------------------------------- #
+# Termini in chiaro — lo specchio dei Termini personali: valori che l'utente
+# dichiara NON personali e che vanno lasciati leggibili anche quando il modello
+# li riconosce. Il caso che li ha fatti nascere: nei referti neuropsicologici le
+# scale portano il nome di chi le ha scritte (RAADS-R di Ritvo, Beck, Wechsler,
+# Asperger). Sono nomi di persona a tutti gli effetti, il modello fa il suo
+# lavoro etichettandoli, ma non sono il paziente: coprirli rende il testo
+# incomprensibile a chi lo deve leggere.
+#
+# ATTENZIONE: questa lista TOGLIE protezione. Per questo (a) il confronto e'
+# ancorato ai confini di parola come tutto il resto — "Beck" non deve scoprire
+# "Beckenbauer" — (b) vale solo sui tag dichiarati, non su tutti, cosi' un
+# cognome tenuto in chiaro come ORG non scopre la stessa parola quando e' un
+# FULLNAME, e (c) il Rapporto conta quante occorrenze sono state lasciate in
+# chiaro e di che tipo (mai i valori: quelli restano su questo computer).
+# --------------------------------------------------------------------------- #
+KEEP_TERMS_MAX = 200
+KEEP_TERM_MAXLEN = 300
+
+
+def parse_keep_terms(value) -> list:
+    """Normalizza i Termini in chiaro: lista di {"value", "tags"}.
+
+    tags = elenco di tag su cui la voce vale; vuoto = su qualunque tag. Scarta
+    (mai errore: prefs.json puo' essere vecchio o toccato a mano) le voci con
+    meno di 3 caratteri alfanumerici: sotto quella soglia si scoprirebbero
+    frammenti in mezzo alle parole, la stessa trappola dei valori corti.
+    Dedup sul valore minuscolo; tetto KEEP_TERMS_MAX."""
+    if not isinstance(value, (list, tuple)):
+        return []
+    out, visti = [], set()
+    for v in value:
+        if isinstance(v, str):
+            v = {"value": v}
+        if not isinstance(v, dict):
+            continue
+        val = str(v.get("value") or "").strip()[:KEEP_TERM_MAXLEN]
+        if len(re.sub(r"[^0-9A-Za-zÀ-ÿ]", "", val)) < 3:
+            continue
+        tags = v.get("tags") or v.get("tag") or []
+        if isinstance(tags, str):
+            tags = [tags]
+        tags = [str(t).strip().upper() for t in tags if _TAG_RX.match(str(t).strip().upper())]
+        k = val.lower()
+        if k in visti:
+            continue
+        visti.add(k)
+        out.append({"value": val, "tags": sorted(set(tags))})
+        if len(out) >= KEEP_TERMS_MAX:
+            break
+    return out
+
+
+def _keep_rx(val):
+    """Stessa disciplina del matching PDF: confini di parola, e gli spazi del
+    termine valgono qualsiasi spaziatura (a-capo dei PDF inclusi)."""
+    return re.compile(r"(?<!\w)" + r"\s+".join(re.escape(w) for w in val.split()) + r"(?!\w)",
+                      re.IGNORECASE)
+
+
+def drop_keep_terms(text, ents, terms):
+    """Toglie dalle entita' quelle che l'utente ha dichiarato da lasciare in chiaro.
+
+    Ritorna (entita_tenute, scartate_per_tag). Un'entita' cade se il suo testo
+    coincide ESATTAMENTE con un termine (non se lo contiene: "Dr. Beck Rossi"
+    resta coperto) e se il termine vale per il suo tag."""
+    if not terms:
+        return list(ents), {}
+    regole = [(t["value"], set(t.get("tags") or ()), _keep_rx(t["value"])) for t in terms]
+    tenute, scartate = [], {}
+    for e in ents:
+        val = text[e["start"]:e["end"]]
+        colpita = False
+        for _v, tags, rx in regole:
+            if tags and e["label"] not in tags:
+                continue
+            m = rx.fullmatch(val.strip())
+            if m:
+                colpita = True
+                break
+        if colpita:
+            scartate[e["label"]] = scartate.get(e["label"], 0) + 1
+        else:
+            tenute.append(e)
+    return tenute, scartate
+
+
+def load_keep_terms() -> list:
+    return parse_keep_terms(_read_prefs_raw().get("keep_terms"))
+
+
+def save_keep_terms(terms) -> list:
+    """Scrive SOLO la chiave keep_terms, lasciando intatte le altre."""
+    data = _read_prefs_raw()
+    data["keep_terms"] = parse_keep_terms(terms)
+    d = server_config.config_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    server_config.prefs_path().write_text(json.dumps(data, indent=2), "utf-8")
+    return data["keep_terms"]
+
+
 def load_custom_terms() -> list:
     return parse_custom_terms(_read_prefs_raw().get("custom_terms"))
 

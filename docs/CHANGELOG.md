@@ -5,6 +5,39 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-08 — Termini in chiaro: dire che un nome NON e' un dato personale
+
+Nei referti neuropsicologici le scale portano il nome di chi le ha scritte: RAADS-R di Ritvo, Beck,
+Wechsler, Asperger. Il modello li etichetta come persone — e fa il suo lavoro — ma non sono il
+paziente, e coprirli rende il testo incomprensibile a chi lo deve leggere. Fino a ieri non c'era
+modo di dirlo: i tag esclusi spengono un TIPO intero (spegnere FULLNAME per salvare «Ritvo»
+lascerebbe in chiaro il paziente) e i Termini personali sono la lista opposta.
+
+- **`drop_keep_terms` in `detectors_local.py`** (dove si testa senza modello, invariante 4): filtra
+  le entita' DOPO la fusione, non prima, perche' il confronto deve avvenire sul testo dell'entita'
+  definitiva e non su un candidato che `_merge` potrebbe allargare. Il confronto e' un **fullmatch**:
+  «Beck» in lista non scopre «Beckenbauer» ne' «Beck Rossi» — se cadesse anche il contenente, un
+  cognome in lista scoprirebbe mezzo documento. La spaziatura resta flessibile (in un PDF «Beck
+  Depression» arriva spezzato da un a-capo) e la voce puo' valere su **tag scelti**: «Beck» come
+  FULLNAME resta in chiaro, la stessa parola come ORG no.
+- **Un gesto solo, dalla tabella del dizionario**: 👁️ su ogni riga, dove il valore si vede nel suo
+  contesto. Chiede conferma (toglie protezione), scrive la regola in `prefs.json` e **rianonimizza
+  subito**. La lista e' permanente perche' un nome di scala vale per tutti i documenti dello studio,
+  non per uno solo; si guarda e si toglie dalla scheda 🏷️ → 👁️, accanto ai Termini personali.
+- **Il Rapporto lo registra**: `cleared_on_purpose {count, by_tag}` e `keep_terms_count`. Il
+  conteggio e i tag, **mai i valori** — il Rapporto si archivia con la pratica e la regola sul
+  perche' un cognome era in chiaro resta su questa macchina. Verificato sull'app viva: dopo il
+  gesto il Rapporto dice `{count:1, by_tag:{FULLNAME:1}}` e non contiene ne' «Beck» ne' il nome del
+  paziente.
+- Scheda Sicurezza e `CONFORMITA-CH.md` §4 dichiarano la seconda eccezione al «niente in chiaro su
+  disco», con l'avvertenza che questa toglie protezione e va rivista.
+- **`tests/test_keep_terms.py`** (9 prove): guardano soprattutto che non tolga piu' del dovuto —
+  nessuna scoperta parziale, nessuna scoperta su un tag diverso da quello dichiarato, valori sotto
+  i 3 alfanumerici scartati, input storto che non solleva. Suite: **137 test verdi**.
+- ⚠️ Due difetti trovati provando il gesto a schermo, non leggendo il codice: il testo della
+  conferma mostrava `\n` letterali (backslash raddoppiato) e il secondo segnaposto `{v}` restava
+  tale, perche' `String.replace` sostituisce **solo la prima occorrenza**. Ora `replaceAll`.
+
 ## 2026-09-08 — il dizionario si alza e si ridimensiona
 
 Con un documento vero il dizionario e' la parte che si guarda di piu' (153 voci su un referto

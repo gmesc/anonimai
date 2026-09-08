@@ -330,6 +330,7 @@ _prefs = server_config.load_prefs()
 EXCLUDED_TAGS = _prefs["excluded_tags"]
 MAPPING_ENABLED = _prefs["mapping_enabled"]
 CUSTOM_TERMS = detectors_local.load_custom_terms()   # fork: Termini personali
+KEEP_TERMS = detectors_local.load_keep_terms()       # fork: Termini in chiaro
 
 
 # --------------------------------------------------------------------------- #
@@ -463,6 +464,11 @@ def analyze(text, excluded=None, mapping_enabled=True):
     if excluded:
         cands = [e for e in cands if e["label"] not in excluded]
     kept = _merge(cands, text)
+    # fork: Termini in chiaro — l'utente ha dichiarato che questi valori non sono
+    # dati personali (i nomi delle scale nei referti: Ritvo, Beck, Wechsler).
+    # Si filtra DOPO la fusione, non prima: il confronto deve avvenire sul testo
+    # dell'entita' definitiva, non su un candidato che il merge potrebbe allargare.
+    kept, cleared = detectors_local.drop_keep_terms(text, kept, KEEP_TERMS)
 
     # ID reversibili: stesso (label, valore-normalizzato) -> stesso placeholder.
     counters, seen, mapping = {}, {}, {}
@@ -514,6 +520,10 @@ def analyze(text, excluded=None, mapping_enabled=True):
         "by_label": dict(sorted(by_label.items(), key=lambda x: -x[1])),
         "by_source": by_source,
         "excluded_tags": sorted(excluded),
+        # quante occorrenze sono state lasciate in chiaro di proposito, per tag.
+        # MAI i valori: quelli restano in prefs.json su questa macchina.
+        "cleared_by_tag": dict(sorted(cleared.items(), key=lambda x: -x[1])),
+        "n_cleared": sum(cleared.values()),
     }
 
 
@@ -938,6 +948,7 @@ def settings_get():
         "excluded_tags": EXCLUDED_TAGS,
         "mapping_enabled": MAPPING_ENABLED,
         "custom_terms": CUSTOM_TERMS,
+        "keep_terms": KEEP_TERMS,
         "config_path": str(server_config.prefs_path()),
         "env_override": "PII_EXCLUDE_TAGS" in os.environ or "PII_MAPPING" in os.environ,
     })
@@ -946,7 +957,7 @@ def settings_get():
 @app.route("/settings", methods=["POST"])
 @app.route("/tags", methods=["POST"])
 def settings_post():
-    global EXCLUDED_TAGS, MAPPING_ENABLED, CUSTOM_TERMS
+    global EXCLUDED_TAGS, MAPPING_ENABLED, CUSTOM_TERMS, KEEP_TERMS
     data = request.get_json(silent=True) or {}
     tags = None
     if "excluded_tags" in data:
@@ -960,18 +971,22 @@ def settings_post():
             return jsonify({"error": f"Tag sconosciuti: {', '.join(unknown)}"}), 400
     mapping = data.get("mapping_enabled")
     terms = data.get("custom_terms") if "custom_terms" in data else None
-    if tags is None and mapping is None and terms is None:
+    keep = data.get("keep_terms") if "keep_terms" in data else None
+    if tags is None and mapping is None and terms is None and keep is None:
         return jsonify({"error": "Niente da salvare: passa excluded_tags, "
-                                 "mapping_enabled e/o custom_terms."}), 400
+                                 "mapping_enabled, custom_terms e/o keep_terms."}), 400
     if tags is not None or mapping is not None:
         saved = server_config.save_prefs(excluded_tags=tags, mapping_enabled=mapping)
         EXCLUDED_TAGS = saved["excluded_tags"]
         MAPPING_ENABLED = saved["mapping_enabled"]
     if terms is not None:                              # fork: chiave separata
         CUSTOM_TERMS = detectors_local.save_custom_terms(terms)
+    if keep is not None:                               # fork: Termini in chiaro
+        KEEP_TERMS = detectors_local.save_keep_terms(keep)
     return jsonify({"ok": True, "excluded_tags": EXCLUDED_TAGS,
                     "mapping_enabled": MAPPING_ENABLED,
-                    "custom_terms": CUSTOM_TERMS})
+                    "custom_terms": CUSTOM_TERMS,
+                    "keep_terms": KEEP_TERMS})
 
 
 # --------------------------------------------------------------------------- #
@@ -1312,6 +1327,10 @@ html[data-dict="max"] .dict .tablewrap{max-height:none;height:auto}
 .dict .meta{padding:13px 16px 6px}
 .dict .legend{padding:0 16px 12px;border-top:none}
 .dict .tablewrap{max-height:var(--dict-h,300px);overflow:auto;padding:0 16px 16px}
+.dict td.act{width:1%;text-align:right;white-space:nowrap}
+.dict td.act .rm{height:var(--tb-h);min-width:var(--tb-min);border:0;background:transparent;
+     cursor:pointer;color:var(--muted);font-size:13px;transition:background var(--speed)}
+.dict td.act .rm:hover{background:var(--hover);color:var(--ink)}
 
 /* pannello Ripristina */
 .pane{display:none}
@@ -1786,6 +1805,10 @@ html[data-dict="max"] .dict .tablewrap{max-height:none;height:auto}
       <button class="mini" onclick="addTerm()" data-i18n="ct_add">Aggiungi</button>
     </div>
     <div class="ct-list" id="ctList"></div>
+
+    <div class="ct-head">👁️ <span data-i18n="keep_title">Termini in chiaro</span></div>
+    <div class="tg-sub" data-i18n="keep_sub">Valori che <b>non</b> vanno coperti anche se il modello li riconosce: i nomi delle scale nei referti (Ritvo, Beck, Wechsler), una sigla che sembra un nome. <b>Toglie protezione</b>: il Rapporto conta quante volte è stato usato. Anche qui restano salvati su questo computer.</div>
+    <div class="ct-list" id="keepList"></div>
     <div class="cfg-status" id="tgStatus"></div>
     <div class="cfg-btns" style="margin-top:14px">
       <button class="btn" onclick="saveTags()">💾 <span data-i18n="cfg_save">Salva</span></button>
@@ -1871,7 +1894,7 @@ const T = {
   terms_first_title:"Prima di iniziare", terms_ok:"Ho capito",
   terms_first_body:"<p>AnonimAI è uno <b>strumento di supporto</b> alla <b>pseudonimizzazione</b>: gira su questo computer e nessun dato raggiunge gli autori. Quattro cose da sapere prima di cominciare.</p><ul><li><b>Prima di incollare in un chatbot, la verifica umana è obbligatoria.</b> Non consigliata: obbligatoria. Il rilevamento è statistico e <b>può sbagliare</b> — un nome fuori posto, una sigla scambiata per un'altra cosa — e l'invio a un servizio esterno <b>non si può annullare</b>: quello che è uscito è uscito. <b>Rileggi il testo con i segnaposto</b> subito prima di incollarlo in ChatGPT o in qualunque altro strumento, e fermati quando l'app ti avvisa che qualcosa è rimasto in chiaro. È l'ultimo momento in cui un errore si ferma ancora, e nessun controllo automatico sostituisce quella lettura: nemmeno questo.</li><li><b>Rispetta le regole di chi risponde dei dati.</b> Se lavori per uno studio, una scuola, un ente o un'azienda, <b>il titolare del trattamento è quello</b>, e valgono le sue direttive: quali documenti possono uscire, verso quali servizi esterni, con quale autorizzazione. <b>Anonimizzare non autorizza</b>: se una direttiva interna, il segreto professionale o una norma vietano quell'invio, il divieto resta anche con i segnaposto.</li><li><b>Quello che esce resta un dato personale.</b> Con il dizionario attivo è una <b>pseudonimizzazione</b>, reversibile da chiunque abbia il dizionario. Spegnendolo nessuna chiave viene creata, ma se il testo sia davvero anonimo lo decide una valutazione, non il programma: una vicenda raccontata per esteso identifica la persona anche senza il suo nome.</li><li><b>Nessuna garanzia</b> (MIT / AGPL-3.0): il software non certifica la conformità di nessun trattamento. La responsabilità resta di chi tratta i dati — tu, o l'ente per cui lavori.</li></ul><p>Testo completo in ⚙️ Impostazioni → Condizioni. Le abitudini che riducono i rischi attorno al computer: ⚙️ → Buone abitudini.</p>",
   net_warn:"⚠️ <b>Server esposto in rete</b> (raggiunto come <code>{h}</code>, non da questo computer). I documenti passano da un'altra macchina: chi la gestisce offre un servizio e ne risponde. Usalo solo dietro un accesso controllato.",
-  sec_body:"<h4>Prima di condividere</h4><ul><li><b>Rileggi sempre l'output.</b> Il modello può sbagliare: un nome fuori posto, una sigla scambiata per un'altra cosa. La rilettura è tua, non delegabile.</li><li><b>Se l'app ti avvisa, fermati.</b> Dopo il PDF può comparire «N valori sono rimasti in chiaro»: sono i <b>residui</b> (ancora leggibili nell'output) e i <b>saltati</b> (frammenti troppo corti per essere cercati senza devastare il documento). Vai a vederli.</li><li><b>Controlla i tag attivi</b> (🏷️): i tipi che deselezioni vengono rilevati ma <b>lasciati in chiaro</b> apposta. È una scelta tua, ma va ricordata prima di mandare fuori il file.</li></ul><h4>Il dizionario è la chiave</h4><ul><li>Il file <code>dizionario_anonimizzazione.json</code> contiene <b>tutte le PII in chiaro</b>. Chi ce l'ha può deanonimizzare qualsiasi cosa: <b>vale quanto il documento originale</b>.</li><li><b>Non allegarlo mai insieme</b> al documento anonimizzato, non metterlo nella stessa cartella condivisa, non incollarlo in un LLM.</li><li>Finché il dizionario esiste, quella che hai è una <b>pseudonimizzazione</b>: per la nLPD svizzera (art. 5 lett. a) come per il GDPR resta dato personale. Vuoi un'anonimizzazione <b>definitiva</b>? Spegni lo switch: nessuna chiave viene creata e il ripristino diventa impossibile, per tutti.</li><li>Il dizionario vive nel browser <b>solo per la sessione</b>: chiudi l'app e sparisce; <b>Pulisci</b> lo cancella subito. Se attivi «💾 ricorda tra le sessioni» accanto allo switch, resta su disco <b>in chiaro</b> nel profilo dell'app finché non lo pulisci: scelta tua, da dichiarare. I documenti stanno in memoria e muoiono con l'app, con <b>Pulisci</b>, o da soli dopo <b>7 minuti</b> senza che tu tocchi niente (il server li butta comunque entro 10): sul disco non resta niente.</li><li>Unica eccezione voluta: i <b>Termini personali</b> (🏷️ → 📌) sono salvati in chiaro in <code>prefs.json</code> su questo computer — sono i valori che hai chiesto di rilevare sempre. Rimuovili da lì se il computer cambia mani.</li></ul><h4>Cornice legale in Svizzera</h4><ul><li><b>nLPD</b> (in vigore dal 1° settembre 2023): l'app serve la <b>minimizzazione</b> (art. 6) e la <b>protezione fin dalla progettazione e per impostazione predefinita</b> (art. 7): al fornitore dell'LLM arrivano segnaposto, non dati. Ma il titolare del trattamento resti tu: la <b>valutazione della comunicazione all'estero</b> (art. 16-17, il fornitore dell'LLM è un destinatario estero: verifica la sua certificazione Swiss-U.S. DPF o le garanzie contrattuali) e, per i trattamenti a rischio elevato, la <b>valutazione d'impatto</b> (art. 22) sono compiti tuoi.</li><li><b>Enti pubblici, Comuni, scuole pubbliche del Ticino</b>: si applica la <b>LPDP cantonale</b> (RL 163.100), non la nLPD; l'autorità è l'Incaricato cantonale della protezione dei dati. Il rapporto di anonimizzazione (📋) serve a documentare il trattamento.</li><li><b>Avvocati, notai, medici</b>: vale l'<b>art. 321 CP</b> (segreto professionale). Ciò che finisce in una chat con un fornitore esterno esce dalla sfera protetta: mandare solo segnaposto è il contributo concreto dell'app, la rilettura prima dell'invio resta il tuo.</li><li>L'<b>identificabilità indiretta</b> non è coperta da nessun tagger: una vicenda rara descritta per esteso identifica la persona anche senza un nome. Il testo che esce va letto, non solo anonimizzato.</li></ul><h4>Quello che il testo non copre</h4><ul><li><b>Firme, timbri, loghi</b>: non sono testo, nessun modello li legge. Coprili con i <b>riquadri manuali</b> (✏️) — sotto il riquadro i pixel vengono cancellati davvero.</li><li><b>Scansioni e foto</b>: servono i file OCR. Se nella scheda Server l'OCR non risulta attivo, un PDF fotografato non può essere redatto — e l'app lo dice invece di consegnarti un file intatto.</li><li><b>Scritte verticali e a margine</b> (protocolli, sigle laterali): l'OCR le prende male. Riquadro manuale.</li></ul><h4>Quale bottone, quando</h4><ul><li><b>Copia testo</b> → per <i>conversare</i> col modello e poi ripristinare la risposta. Non porta con sé layout, firme, immagini.</li><li><b>PDF anonimo</b> → per <i>consegnare o caricare il documento</i>. È l'unico che protegge anche ciò che non è testo.</li><li><b>Rapporto</b> (📋) → il verbale del trattamento, senza valori: da archiviare con la pratica.</li><li>Nel dubbio: <b>PDF</b>, e rileggilo.</li></ul><h4>Rete</h4><ul><li>Il server ascolta su <code>127.0.0.1</code>: solo questo computer. Se lo esponi (<code>--host 0.0.0.0</code>, Docker su un server d'ufficio) chiunque nella rete può usarlo, e i documenti degli altri passano da lì: mettilo dietro a un accesso controllato.</li><li>Anche esposto, l'app non chiama nessuno: nessuna API, nessuna telemetria. Ciò che entra non esce.</li></ul>",
+  sec_body:"<h4>Prima di condividere</h4><ul><li><b>Rileggi sempre l'output.</b> Il modello può sbagliare: un nome fuori posto, una sigla scambiata per un'altra cosa. La rilettura è tua, non delegabile.</li><li><b>Se l'app ti avvisa, fermati.</b> Dopo il PDF può comparire «N valori sono rimasti in chiaro»: sono i <b>residui</b> (ancora leggibili nell'output) e i <b>saltati</b> (frammenti troppo corti per essere cercati senza devastare il documento). Vai a vederli.</li><li><b>Controlla i tag attivi</b> (🏷️): i tipi che deselezioni vengono rilevati ma <b>lasciati in chiaro</b> apposta. È una scelta tua, ma va ricordata prima di mandare fuori il file.</li></ul><h4>Il dizionario è la chiave</h4><ul><li>Il file <code>dizionario_anonimizzazione.json</code> contiene <b>tutte le PII in chiaro</b>. Chi ce l'ha può deanonimizzare qualsiasi cosa: <b>vale quanto il documento originale</b>.</li><li><b>Non allegarlo mai insieme</b> al documento anonimizzato, non metterlo nella stessa cartella condivisa, non incollarlo in un LLM.</li><li>Finché il dizionario esiste, quella che hai è una <b>pseudonimizzazione</b>: per la nLPD svizzera (art. 5 lett. a) come per il GDPR resta dato personale. Vuoi un'anonimizzazione <b>definitiva</b>? Spegni lo switch: nessuna chiave viene creata e il ripristino diventa impossibile, per tutti.</li><li>Il dizionario vive nel browser <b>solo per la sessione</b>: chiudi l'app e sparisce; <b>Pulisci</b> lo cancella subito. Se attivi «💾 ricorda tra le sessioni» accanto allo switch, resta su disco <b>in chiaro</b> nel profilo dell'app finché non lo pulisci: scelta tua, da dichiarare. I documenti stanno in memoria e muoiono con l'app, con <b>Pulisci</b>, o da soli dopo <b>7 minuti</b> senza che tu tocchi niente (il server li butta comunque entro 10): sul disco non resta niente.</li><li>Uniche eccezioni volute: i <b>Termini personali</b> (🏷️ → 📌) e i <b>Termini in chiaro</b> (🏷️ → 👁️) sono salvati in chiaro in <code>prefs.json</code> su questo computer — i primi sono i valori che hai chiesto di coprire sempre, i secondi quelli che hai dichiarato non personali (i nomi delle scale in un referto). I secondi <b>tolgono protezione</b>: rivedili ogni tanto, e il Rapporto conta quante volte sono stati applicati. Rimuovili da lì se il computer cambia mani.</li></ul><h4>Cornice legale in Svizzera</h4><ul><li><b>nLPD</b> (in vigore dal 1° settembre 2023): l'app serve la <b>minimizzazione</b> (art. 6) e la <b>protezione fin dalla progettazione e per impostazione predefinita</b> (art. 7): al fornitore dell'LLM arrivano segnaposto, non dati. Ma il titolare del trattamento resti tu: la <b>valutazione della comunicazione all'estero</b> (art. 16-17, il fornitore dell'LLM è un destinatario estero: verifica la sua certificazione Swiss-U.S. DPF o le garanzie contrattuali) e, per i trattamenti a rischio elevato, la <b>valutazione d'impatto</b> (art. 22) sono compiti tuoi.</li><li><b>Enti pubblici, Comuni, scuole pubbliche del Ticino</b>: si applica la <b>LPDP cantonale</b> (RL 163.100), non la nLPD; l'autorità è l'Incaricato cantonale della protezione dei dati. Il rapporto di anonimizzazione (📋) serve a documentare il trattamento.</li><li><b>Avvocati, notai, medici</b>: vale l'<b>art. 321 CP</b> (segreto professionale). Ciò che finisce in una chat con un fornitore esterno esce dalla sfera protetta: mandare solo segnaposto è il contributo concreto dell'app, la rilettura prima dell'invio resta il tuo.</li><li>L'<b>identificabilità indiretta</b> non è coperta da nessun tagger: una vicenda rara descritta per esteso identifica la persona anche senza un nome. Il testo che esce va letto, non solo anonimizzato.</li></ul><h4>Quello che il testo non copre</h4><ul><li><b>Firme, timbri, loghi</b>: non sono testo, nessun modello li legge. Coprili con i <b>riquadri manuali</b> (✏️) — sotto il riquadro i pixel vengono cancellati davvero.</li><li><b>Scansioni e foto</b>: servono i file OCR. Se nella scheda Server l'OCR non risulta attivo, un PDF fotografato non può essere redatto — e l'app lo dice invece di consegnarti un file intatto.</li><li><b>Scritte verticali e a margine</b> (protocolli, sigle laterali): l'OCR le prende male. Riquadro manuale.</li></ul><h4>Quale bottone, quando</h4><ul><li><b>Copia testo</b> → per <i>conversare</i> col modello e poi ripristinare la risposta. Non porta con sé layout, firme, immagini.</li><li><b>PDF anonimo</b> → per <i>consegnare o caricare il documento</i>. È l'unico che protegge anche ciò che non è testo.</li><li><b>Rapporto</b> (📋) → il verbale del trattamento, senza valori: da archiviare con la pratica.</li><li>Nel dubbio: <b>PDF</b>, e rileggilo.</li></ul><h4>Rete</h4><ul><li>Il server ascolta su <code>127.0.0.1</code>: solo questo computer. Se lo esponi (<code>--host 0.0.0.0</code>, Docker su un server d'ufficio) chiunque nella rete può usarlo, e i documenti degli altri passano da lì: mettilo dietro a un accesso controllato.</li><li>Anche esposto, l'app non chiama nessuno: nessuna API, nessuna telemetria. Ciò che entra non esce.</li></ul>",
   tip_copy:"<b>Testo con i segnaposto negli appunti.</b> <span class=\"warn\">Rileggilo prima di incollarlo:</span> l'invio a un servizio esterno non si annulla. Incollalo nella chat: la risposta che torna contiene i placeholder e in modalità <b>Deanonimizza</b> ridiventa leggibile. Non porta con sé impaginazione, firme e immagini — per quelle serve il PDF.",
   tip_pdf:"<b>Il documento vero, redatto.</b> Layout intatto, PII rimosse dal contenuto del file, pixel cancellati sotto i riquadri manuali, metadati e allegati ripuliti. È la scelta giusta per caricare o consegnare il file. <span class=\"warn\">Rileggilo prima di condividerlo:</span> se qualcosa resta in chiaro l'app te lo dice.",
   dlrep:"Rapporto", tip_rep:"<b>Rapporto di anonimizzazione, senza valori.</b> Data, impronta SHA-256 dell'input, conteggi per tag e per fonte, tag esclusi, residui/saltati del PDF, versione di app e modello. Serve a documentare il trattamento (LPDP, registro dello studio). Non contiene nessuna PII: si può archiviare con la pratica.",
@@ -1889,6 +1912,13 @@ const T = {
   tg_all:"Seleziona tutti", tg_none:"Nessuno",
   tg_saved:"Selezione salvata", tg_err:"Salvataggio non riuscito",
   tg_note:p=>"Salvato in "+p+" · vale anche per l'API /analyze.",
+  keep_title:"Termini in chiaro", keep_anytag:"ovunque",
+  keep_sub:"Valori che <b>non</b> vanno coperti anche se il modello li riconosce: i nomi delle scale nei referti (Ritvo, Beck, Wechsler), una sigla che sembra un nome. <b>Toglie protezione</b>: il Rapporto conta quante volte è stato usato. Restano salvati su questo computer.",
+  keep_del:"Togli dalla lista: questo valore tornera' a essere coperto",
+  keep_add:"Lascia in chiaro: questo valore non e' un dato personale",
+  keep_confirm:"«{v}» non verra' piu' coperto, in questo e nei prossimi documenti, quando compare come {t}.\n\nUsalo per cio' che NON e' un dato personale: il nome di una scala, di un test, di un metodo. La regola resta su questo computer e si toglie dalla scheda 🏷️.\n\nLasciare «{v}» in chiaro?",
+  keep_done:"«{v}» resta in chiaro. Rileggi il risultato.",
+  st_clear:"lasciati in chiaro",
   ct_title:"Termini personali",
   ct_sub:"Valori che vuoi <b>sempre</b> anonimizzare (nome dello studio, un progetto, una sigla interna): match esatto, con il tag che scegli — anche uno nuovo. <b>Restano salvati su questo computer</b> (prefs.json).",
   ct_val_ph:"es. Istituto Elvetico", ct_tag_ph:"TAG (es. ORG)", ct_add:"Aggiungi",
@@ -1971,7 +2001,7 @@ const T = {
   terms_first_title:"Before you start", terms_ok:"Got it",
   terms_first_body:"<p>AnonimAI is a <b>support tool</b> for <b>pseudonymisation</b>: it runs on this computer and no data reaches the authors. Four things to know before you start.</p><ul><li><b>Human review is mandatory before you paste into a chatbot.</b> Not advisable: mandatory. Detection is statistical and <b>can be wrong</b> — a name missed, an abbreviation mistaken for something else — and sending text to an external service <b>cannot be undone</b>: what left has left. <b>Re-read the placeholder text</b> right before pasting it into ChatGPT or any other tool, and stop when the app warns you that something was left in the clear. It is the last moment an error can still be caught, and no automatic check replaces that reading: not even this one.</li><li><b>Follow the rules of whoever answers for the data.</b> If you work for a firm, a school, a public body or a company, <b>that organisation is the data controller</b>, and its rules apply: which documents may leave, to which external services, with whose authorisation. <b>Anonymising does not authorise</b>: if an internal directive, professional secrecy or a legal duty forbids that transfer, the ban stands even with placeholders.</li><li><b>What comes out is still personal data.</b> With the dictionary on it is <b>pseudonymisation</b>, reversible by anyone holding the dictionary. Switch it off and no key is created, but whether the text is truly anonymous is a legal assessment, not something the program can decide: a story told in detail identifies the person even without a name.</li><li><b>No warranty</b> (MIT / AGPL-3.0): the software certifies the compliance of no processing. Responsibility stays with whoever processes the data — you, or the organisation you work for.</li></ul><p>Full text in ⚙️ Settings → Terms. The habits that reduce the risks around the computer: ⚙️ → Good habits.</p>",
   net_warn:"⚠️ <b>Server exposed on the network</b> (reached as <code>{h}</code>, not from this computer). Documents transit through another machine: whoever runs it provides a service and answers for it. Use it only behind controlled access.",
-  sec_body:"<h4>Before you share</h4><ul><li><b>Always re-read the output.</b> The model can be wrong: a name missed, an abbreviation mistaken for something else. That check is yours and cannot be delegated.</li><li><b>If the app warns you, stop.</b> After the PDF you may see “N values were left in the clear”: those are <b>residuals</b> (still readable in the output) and <b>skipped</b> values (fragments too short to search for without wrecking the document). Go and look at them.</li><li><b>Check the active tags</b> (🏷️): the types you untick are still detected but <b>left in the clear</b> on purpose. Your choice — worth remembering before the file goes out.</li></ul><h4>The dictionary is the key</h4><ul><li>The file <code>dizionario_anonimizzazione.json</code> holds <b>every PII in the clear</b>. Whoever has it can de-anonymise anything: <b>it is worth as much as the original document</b>.</li><li><b>Never attach it together</b> with the anonymised document, never put it in the same shared folder, never paste it into an LLM.</li><li>As long as the dictionary exists you have <b>pseudonymisation</b>: under the Swiss FADP (art. 5 let. a) as under the GDPR that is still personal data. Want <b>irreversible</b> anonymisation? Switch the dictionary off: no key is created and restoring becomes impossible, for everyone.</li><li>The dictionary lives in the browser <b>for the session only</b>: close the app and it is gone; <b>Clear</b> deletes it at once. If you enable “💾 remember across sessions” next to the switch, it stays on disk <b>in the clear</b> in the app profile until you clear it: your choice, to be declared. Documents live in memory and die with the app, with <b>Clear</b>, or on their own after <b>7 minutes</b> of inactivity (the server drops them within 10 anyway): nothing is left on disk.</li><li>One deliberate exception: <b>Personal terms</b> (🏷️ → 📌) are saved in the clear in <code>prefs.json</code> on this computer — they are the values you asked to always detect. Remove them there if the computer changes hands.</li></ul><h4>Legal frame in Switzerland</h4><ul><li><b>FADP</b> (in force since 1 September 2023): the app serves <b>data minimisation</b> (art. 6) and <b>privacy by design and by default</b> (art. 7): the LLM provider receives placeholders, not data. But you remain the controller: the <b>cross-border disclosure</b> assessment (art. 16-17, the LLM provider is a foreign recipient: check its Swiss-U.S. DPF certification or contractual safeguards) and, for high-risk processing, the <b>impact assessment</b> (art. 22) are yours.</li><li><b>Public bodies, municipalities, public schools in Ticino</b>: the cantonal <b>LPDP</b> (RL 163.100) applies, not the FADP; the authority is the cantonal Data Protection Commissioner. The anonymisation report (📋) documents the processing.</li><li><b>Lawyers, notaries, physicians</b>: <b>art. 321 of the Swiss Criminal Code</b> (professional secrecy) applies. Whatever ends up in a chat with an external provider leaves the protected sphere: sending placeholders only is the app's concrete contribution, re-reading before sending remains yours.</li><li><b>Indirect identifiability</b> is covered by no tagger: a rare story told in detail identifies the person even without a name. What goes out must be read, not just anonymised.</li></ul><h4>What text does not cover</h4><ul><li><b>Signatures, stamps, logos</b>: not text, no model reads them. Cover them with the <b>manual boxes</b> (✏️) — under the box the pixels are actually erased.</li><li><b>Scans and photos</b>: they need the OCR files. If OCR is not active, a photographed PDF cannot be redacted — and the app says so instead of handing you an untouched file.</li><li><b>Vertical and margin writing</b> (protocol stamps, side codes): OCR reads them badly. Use a manual box.</li></ul><h4>Which button, when</h4><ul><li><b>Copy text</b> → to <i>talk</i> to the model and restore its answer afterwards. Carries no layout, signatures or images.</li><li><b>Anonymized PDF</b> → to <i>hand over or upload the document</i>. The only one that also protects what is not text.</li><li><b>Report</b> (📋) → the processing record, no values: file it with the case.</li><li>When in doubt: <b>PDF</b>, and re-read it.</li></ul><h4>Network</h4><ul><li>The server listens on <code>127.0.0.1</code>: this machine only. If you expose it (<code>--host 0.0.0.0</code>, Docker on an office server) anyone on the network can use it and other people's documents go through it: put it behind controlled access.</li><li>Even exposed, the app calls nobody: no API, no telemetry. What comes in does not go out.</li></ul>",
+  sec_body:"<h4>Before you share</h4><ul><li><b>Always re-read the output.</b> The model can be wrong: a name missed, an abbreviation mistaken for something else. That check is yours and cannot be delegated.</li><li><b>If the app warns you, stop.</b> After the PDF you may see “N values were left in the clear”: those are <b>residuals</b> (still readable in the output) and <b>skipped</b> values (fragments too short to search for without wrecking the document). Go and look at them.</li><li><b>Check the active tags</b> (🏷️): the types you untick are still detected but <b>left in the clear</b> on purpose. Your choice — worth remembering before the file goes out.</li></ul><h4>The dictionary is the key</h4><ul><li>The file <code>dizionario_anonimizzazione.json</code> holds <b>every PII in the clear</b>. Whoever has it can de-anonymise anything: <b>it is worth as much as the original document</b>.</li><li><b>Never attach it together</b> with the anonymised document, never put it in the same shared folder, never paste it into an LLM.</li><li>As long as the dictionary exists you have <b>pseudonymisation</b>: under the Swiss FADP (art. 5 let. a) as under the GDPR that is still personal data. Want <b>irreversible</b> anonymisation? Switch the dictionary off: no key is created and restoring becomes impossible, for everyone.</li><li>The dictionary lives in the browser <b>for the session only</b>: close the app and it is gone; <b>Clear</b> deletes it at once. If you enable “💾 remember across sessions” next to the switch, it stays on disk <b>in the clear</b> in the app profile until you clear it: your choice, to be declared. Documents live in memory and die with the app, with <b>Clear</b>, or on their own after <b>7 minutes</b> of inactivity (the server drops them within 10 anyway): nothing is left on disk.</li><li>Two deliberate exceptions: <b>Personal terms</b> (🏷️ → 📌) and <b>Terms left in the clear</b> (🏷️ → 👁️) are saved in the clear in <code>prefs.json</code> on this computer — the first are values you asked to always cover, the second the ones you declared not personal (the names of scales in a report). The second kind <b>removes protection</b>: review them now and then, and the Report counts how often they were applied. Remove them there if the computer changes hands.</li></ul><h4>Legal frame in Switzerland</h4><ul><li><b>FADP</b> (in force since 1 September 2023): the app serves <b>data minimisation</b> (art. 6) and <b>privacy by design and by default</b> (art. 7): the LLM provider receives placeholders, not data. But you remain the controller: the <b>cross-border disclosure</b> assessment (art. 16-17, the LLM provider is a foreign recipient: check its Swiss-U.S. DPF certification or contractual safeguards) and, for high-risk processing, the <b>impact assessment</b> (art. 22) are yours.</li><li><b>Public bodies, municipalities, public schools in Ticino</b>: the cantonal <b>LPDP</b> (RL 163.100) applies, not the FADP; the authority is the cantonal Data Protection Commissioner. The anonymisation report (📋) documents the processing.</li><li><b>Lawyers, notaries, physicians</b>: <b>art. 321 of the Swiss Criminal Code</b> (professional secrecy) applies. Whatever ends up in a chat with an external provider leaves the protected sphere: sending placeholders only is the app's concrete contribution, re-reading before sending remains yours.</li><li><b>Indirect identifiability</b> is covered by no tagger: a rare story told in detail identifies the person even without a name. What goes out must be read, not just anonymised.</li></ul><h4>What text does not cover</h4><ul><li><b>Signatures, stamps, logos</b>: not text, no model reads them. Cover them with the <b>manual boxes</b> (✏️) — under the box the pixels are actually erased.</li><li><b>Scans and photos</b>: they need the OCR files. If OCR is not active, a photographed PDF cannot be redacted — and the app says so instead of handing you an untouched file.</li><li><b>Vertical and margin writing</b> (protocol stamps, side codes): OCR reads them badly. Use a manual box.</li></ul><h4>Which button, when</h4><ul><li><b>Copy text</b> → to <i>talk</i> to the model and restore its answer afterwards. Carries no layout, signatures or images.</li><li><b>Anonymized PDF</b> → to <i>hand over or upload the document</i>. The only one that also protects what is not text.</li><li><b>Report</b> (📋) → the processing record, no values: file it with the case.</li><li>When in doubt: <b>PDF</b>, and re-read it.</li></ul><h4>Network</h4><ul><li>The server listens on <code>127.0.0.1</code>: this machine only. If you expose it (<code>--host 0.0.0.0</code>, Docker on an office server) anyone on the network can use it and other people's documents go through it: put it behind controlled access.</li><li>Even exposed, the app calls nobody: no API, no telemetry. What comes in does not go out.</li></ul>",
   tip_copy:"<b>Placeholder text in the clipboard.</b> <span class=\"warn\">Re-read it before you paste:</span> sending to an external service cannot be undone. Paste it into the chat: the answer comes back with the placeholders and becomes readable again in <b>De-anonymize</b> mode. It carries no layout, signatures or images — for those you need the PDF.",
   tip_pdf:"<b>The real document, redacted.</b> Layout intact, PII removed from the file's content, pixels erased under the manual boxes, metadata and attachments scrubbed. The right choice to upload or hand over the file. <span class=\"warn\">Re-read it before sharing:</span> if anything is left in the clear the app tells you.",
   dlrep:"Report", tip_rep:"<b>Anonymisation report, no values.</b> Date, SHA-256 fingerprint of the input, counts per tag and per source, excluded tags, PDF residuals/skipped, app and model version. Documents the processing (cantonal LPDP, firm register). Holds no PII: it can be filed with the case.",
@@ -1989,6 +2019,13 @@ const T = {
   tg_all:"Select all", tg_none:"None",
   tg_saved:"Selection saved", tg_err:"Could not save",
   tg_note:p=>"Saved to "+p+" · also applies to the /analyze API.",
+  keep_title:"Terms left in the clear", keep_anytag:"anywhere",
+  keep_sub:"Values that must <b>not</b> be covered even when the model recognises them: the names of scales in a report (Ritvo, Beck, Wechsler), an abbreviation that looks like a name. <b>It removes protection</b>: the Report counts how often it was used. They too are saved on this computer.",
+  keep_del:"Remove from the list: this value will be covered again",
+  keep_add:"Leave in the clear: this value is not personal data",
+  keep_confirm:"“{v}” will no longer be covered, in this and in future documents, when it appears as {t}.\n\nUse it for what is NOT personal data: the name of a scale, a test, a method. The rule stays on this computer and can be removed from the 🏷️ panel.\n\nLeave “{v}” in the clear?",
+  keep_done:"“{v}” stays in the clear. Re-read the result.",
+  st_clear:"left in the clear",
   ct_title:"Personal terms",
   ct_sub:"Values you <b>always</b> want anonymized (your firm's name, a project, an internal code): exact match, with the tag you choose — even a new one. <b>They stay saved on this computer</b> (prefs.json).",
   ct_val_ph:"e.g. Istituto Elvetico", ct_tag_ph:"TAG (e.g. ORG)", ct_add:"Add",
@@ -2375,7 +2412,12 @@ function render(){
     const tr=document.createElement('tr');
     tr.innerHTML=`<td class="k" style="color:${c.tx}">${ph}</td>`+
       `<td class="v">${escapeHtml(d.mapping[ph])}</td>`+
-      `<td><span class="chip" style="cursor:default"><span class="sw" style="background:${c.bd}"></span>${lab}</span></td>`;
+      `<td><span class="chip" style="cursor:default"><span class="sw" style="background:${c.bd}"></span>${lab}</span></td>`+
+      `<td class="act"><button class="rm" data-i18n-title="keep_add">👁️</button></td>`;
+    // fork: "lascia in chiaro" — il valore entra nei Termini in chiaro (permanenti)
+    // e il testo si rianonimizza. Toglie protezione: si conferma, e il Rapporto
+    // conta quante occorrenze sono state scoperte di proposito.
+    tr.querySelector('.rm').onclick=()=>keepInClear(d.mapping[ph],lab);
     rows.appendChild(tr);}
   $('ulock').textContent=keys.length?T[L].dict_n(keys.length):'';
   if(VIEW==='pdf')setView('pdf');            // stavo guardando il PDF: lo rigenero
@@ -2472,6 +2514,10 @@ $('dlrep').onclick=async()=>{
     dictionary_persisted:PERSIST(),terms_version_accepted:termsAck(),
     served_from:location.hostname,
     excluded_tags:DATA.excluded_tags||[],
+    // fork: quante occorrenze sono state lasciate in chiaro di PROPOSITO, per tag.
+    // Mai i valori: il Rapporto si archivia con la pratica e non deve contenerne.
+    cleared_on_purpose:{count:DATA.n_cleared||0,by_tag:DATA.cleared_by_tag||{}},
+    keep_terms_count:(TAGS_META.keep_terms||[]).length,
     custom_terms_count:(TAGS_META.custom_terms||[]).length,
     entities:DATA.n_entities,unique_values:DATA.n_unique,
     by_tag:DATA.by_label||{},by_source:DATA.by_source||{},
@@ -2537,6 +2583,30 @@ $('dictFile').onchange=e=>{const f=e.target.files[0];if(!f)return;
 
 /* ---- input helpers ---- */
 $('go').onclick=run;
+/* ---- fork: Termini in chiaro -------------------------------------------------
+   Lo specchio dei Termini personali: valori che NON sono dati personali e vanno
+   lasciati leggibili. Il caso che li ha fatti nascere: nei referti le scale
+   portano il nome di chi le ha scritte (RAADS-R di Ritvo, Beck, Wechsler), il
+   modello li etichetta come persone — giustamente — ma coprirli rende il testo
+   incomprensibile a chi lo deve leggere.
+   La lista e' PERMANENTE (prefs.json) perche' un nome di scala vale per tutti i
+   documenti dello studio, non per uno solo; si toglie dalla scheda 🏷️ con un clic. */
+async function keepInClear(valore,tag){
+  if(!confirm(tt('keep_confirm').replaceAll('{v}',valore).replaceAll('{t}',tag)))return;
+  try{
+    const r=await fetch('/settings');const d=await r.json();
+    const lista=d.keep_terms||[];
+    if(!lista.some(k=>k.value.toLowerCase()===valore.toLowerCase()))
+      lista.push({value:valore,tags:[tag]});
+    const w=await fetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({keep_terms:lista})});
+    if(!w.ok)throw new Error();
+    TAGS_LOADED=false;                      // la scheda tag deve rileggere la lista
+    toast(tt('keep_done').replaceAll('{v}',valore));
+    if($('src').value.trim()||$('pdf').files.length)run();   // rianonimizza con la regola nuova
+  }catch(e){toast(tt('t_error'),false);}
+}
+
 /* ---- fork: il dizionario si alza (chevron) e si ridimensiona (maniglia) ----
    Due gesti sullo stesso pezzo: il chevron lo porta a tutta finestra togliendo
    di mezzo le colonne, la maniglia ne regola l'altezza scrivendo --dict-h.
@@ -2813,20 +2883,39 @@ async function openTags(){
   $('tgNote').innerHTML=(TAGS_META.env_override?'<b>'+tt('tg_env')+'</b><br>':'')+
     T[L].tg_note(TAGS_META.config_path||'');
   TERMS=(TAGS_META.custom_terms||[]).map(t=>({value:t.value,tag:t.tag}));
+  KEEP=(TAGS_META.keep_terms||[]).map(k=>({value:k.value,tags:(k.tags||[]).slice()}));
   renderTags();
   renderTerms();
+  renderKeep();
   $('tagsOverlay').classList.add('open');
 }
 function closeTags(){$('tagsOverlay').classList.remove('open');loadTags();}  // ricarica: annulla = scarta
 $('tagsOverlay').addEventListener('click',e=>{if(e.target===$('tagsOverlay'))closeTags();});
+/* fork: i Termini in chiaro si aggiungono dalla tabella del dizionario (dove si
+   vede il valore nel suo contesto); qui si guardano e si tolgono. */
+let KEEP=[];
+function renderKeep(){
+  const list=$('keepList');list.innerHTML='';
+  for(const [i,k] of KEEP.entries()){
+    const tag=(k.tags&&k.tags[0])||'';
+    const c=colors(tag||'ORG');
+    const row=document.createElement('div');row.className='ct-row';
+    row.innerHTML=`<span class="nm" style="color:${c.tx}">${escapeHtml(tag||tt('keep_anytag'))}</span>`+
+      `<span class="val">${escapeHtml(k.value)}</span>`+
+      `<button class="rm" title="${tt('keep_del')}">✕</button>`;
+    row.querySelector('.rm').onclick=()=>{KEEP.splice(i,1);renderKeep();};
+    list.appendChild(row);
+  }
+}
 async function saveTags(){
   try{
     const r=await fetch('/settings',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({excluded_tags:[...EXCL],custom_terms:TERMS})});
+      body:JSON.stringify({excluded_tags:[...EXCL],custom_terms:TERMS,keep_terms:KEEP})});
     const d=await r.json();
     if(!r.ok)throw new Error(d.error||'');
     EXCL=new Set(d.excluded_tags||[]);
     TAGS_META.custom_terms=d.custom_terms||[];
+    TAGS_META.keep_terms=d.keep_terms||[];
     toast(tt('tg_saved'));
     $('tagsOverlay').classList.remove('open');
   }catch(e){$('tgStatus').className='cfg-status fail';$('tgStatus').textContent=tt('tg_err');}

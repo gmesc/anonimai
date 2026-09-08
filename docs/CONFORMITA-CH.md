@@ -60,7 +60,10 @@ qualunque identificabilità indiretta.
 
 1. Dizionario: default in sessione. Se si attiva «💾 ricorda», dichiararlo nella documentazione interna e pulire a pratica chiusa.
 2. Disco cifrato (FileVault / BitLocker) **e blocco automatico dello schermo entro 5 minuti** sulle macchine che fanno girare l'app; account personali, mai condivisi. Le altre abitudini stanno nella scheda ⚙️ → **Buone abitudini**.
-3. Termini personali: sono in chiaro in `prefs.json`; rimuoverli se il computer cambia mani.
+3. Termini personali e **Termini in chiaro**: entrambi in chiaro in `prefs.json`; rimuoverli se il
+   computer cambia mani. I secondi **tolgono protezione** (dicono di non coprire un valore che il
+   modello riconosce: il nome di una scala, di un test): rivederli periodicamente, e leggere nel
+   Rapporto quante occorrenze sono state lasciate in chiaro di proposito.
 4. Per ogni invio a un LLM esterno: rileggere l'output; archiviare il **Rapporto**; se ci sono residui/saltati, fermarsi.
 5. Fornitore LLM: verificare e annotare certificazione DPF o garanzie contrattuali; preferire endpoint senza retention/training.
 6. Dati sanitari o di minori (medici, scuole): DPIA prima di adottare il flusso; per gli enti pubblici, sentire l'Incaricato cantonale.
