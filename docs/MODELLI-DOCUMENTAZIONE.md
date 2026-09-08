@@ -7,7 +7,14 @@
 >
 > A chi servono: a chi usa AnonimAI dentro uno studio, una scuola, un ufficio o una ditta e
 > deve produrre la documentazione che la legge chiede al **titolare del trattamento** — cioè
-> a lui, non agli autori del software. La mappa articolo per articolo è in
+> a lui, non agli autori del software.
+>
+> Due elementi vanno riportati in **tutti** i documenti che seguono, perché descrivono il
+> trattamento per quello che è: AnonimAI esegue una **pseudonimizzazione** (sostituzione degli
+> identificatori diretti con segnaposto, reversibile finché esiste il dizionario), e ogni invio
+> a un servizio esterno è preceduto da una **verifica umana obbligatoria** del testo con i
+> segnaposto. La seconda non è una buona pratica facoltativa: è la misura organizzativa su cui
+> poggia la proporzionalità dell'intero flusso, e va dichiarata come tale. La mappa articolo per articolo è in
 > [CONFORMITA-CH.md](CONFORMITA-CH.md); il quadro per settori, senza gergo, è in
 > [RAPPORTO-CONFORMITA-SETTORI.md](RAPPORTO-CONFORMITA-SETTORI.md).
 
@@ -28,7 +35,7 @@ di intelligenza artificiale esterno → ripristino locale». Se usi l'app per fl
 | Voce | Contenuto |
 |---|---|
 | **Titolare del trattamento** | `[da compilare: ragione sociale / ente, indirizzo, persona di contatto]` |
-| **Nome del trattamento** | Assistenza redazionale con intelligenza artificiale su documenti pseudonimizzati |
+| **Nome del trattamento** | Assistenza redazionale con intelligenza artificiale su documenti **pseudonimizzati** (non anonimizzati: il dizionario rende l'operazione reversibile) |
 | **Scopo** | `[da compilare: es. redazione e revisione di atti, sintesi di documenti, traduzione]` |
 | **Categorie di persone interessate** | `[da compilare: clienti, pazienti, allievi e genitori, dipendenti, controparti]` |
 | **Categorie di dati** | Dati anagrafici e di contatto, identificativi (AVS, IDI, IBAN, targhe, mappali), importi. `[da compilare: dati degni di particolare protezione? salute, misure amministrative, procedimenti]` |
@@ -36,7 +43,7 @@ di intelligenza artificiale esterno → ripristino locale». Se usi l'app per fl
 | **Comunicazione all'estero** | `[da compilare: Stato del fornitore; base della comunicazione: decisione di adeguatezza, Swiss-U.S. Data Privacy Framework, clausole contrattuali tipo]` |
 | **Durata di conservazione** | Dentro l'app: nessuna. I documenti stanno in memoria e vengono cancellati con «Pulisci», alla chiusura, dopo 7 minuti di inattività, e comunque entro 10 minuti sul lato server. Il dizionario reversibile vive nella sessione del browser salvo attivazione esplicita di «ricorda». `[da compilare: quanto conservi i documenti e i rapporti nella tua pratica]` |
 | **Misure di sicurezza tecniche** | Elaborazione **interamente locale**, nessuna chiamata di rete (verificata da prove automatiche); server su `127.0.0.1`, credenziale obbligatoria se esposto in rete; nessuna copia su disco né nella cache del browser; redazione reale del PDF con pulizia di annotazioni, campi, allegati e metadati; verifica finale dei valori residui. `[da compilare: disco cifrato, blocco schermo, gestione degli accessi]` |
-| **Misure organizzative** | Rilettura umana obbligatoria di ogni testo prima dell'invio; archiviazione del Rapporto di anonimizzazione con la pratica. `[da compilare: chi è autorizzato, formazione, direttiva interna]` |
+| **Misure organizzative** | **Verifica umana obbligatoria del testo pseudonimizzato immediatamente prima di ogni invio** a un servizio esterno, con arresto del flusso quando l'app segnala valori residui o saltati; archiviazione del Rapporto di anonimizzazione con la pratica. `[da compilare: chi è autorizzato a effettuare la verifica, come è formato, quale direttiva interna la impone]` |
 | **Responsabile del trattamento** | Gli autori di AnonimAI **non** sono responsabili del trattamento: il software gira sulle vostre macchine e non riceve dati. `[da compilare: il fornitore del servizio di intelligenza artificiale è un responsabile o un destinatario? va contrattualizzato]` |
 
 ---
@@ -54,21 +61,30 @@ con l'Incaricato cantonale.
 
 Catena tecnica, uguale per tutti: documento originale → rilevamento locale dei dati personali
 (modello linguistico locale + regole con verifica matematica dei numeri) → sostituzione con
-segnaposto → invio al servizio esterno del **solo testo con segnaposto** → ritorno della
-risposta → ripristino locale dei valori veri tramite il dizionario, che non lascia la macchina.
+segnaposto, cioè **pseudonimizzazione** → **verifica umana del testo pseudonimizzato** → invio al
+servizio esterno del **solo testo con segnaposto** → ritorno della risposta → ripristino locale dei
+valori veri tramite il dizionario, che non lascia la macchina.
+
+La verifica umana è un passaggio della catena, non un contorno: senza di essa il trattamento
+descritto qui non è quello che si sta valutando. Va indicata come tale anche nel registro.
+Il risultato del trattamento è un dato **pseudonimizzato**: resta un dato personale finché esiste
+il dizionario, e anche senza dizionario l'assenza di identificabilità va valutata sul contenuto.
 
 ### 2.2 Necessità e proporzionalità
 `[da compilare: perché serve un servizio esterno, che alternativa è stata valutata, perché il
 volume di dati trattato è il minimo necessario]`
 
 Elemento a favore, verificabile: al servizio esterno arriva la struttura del testo, non
-l'identità delle persone. È la forma più contenuta di comunicazione compatibile con lo scopo.
+l'identità delle persone. È la forma più contenuta di comunicazione compatibile con lo scopo —
+**a condizione che la verifica umana avvenga davvero prima di ogni invio**. Se quella verifica
+non è organizzata (chi la fa, quando, con quale istruzione in caso di dubbio), la proporzionalità
+qui affermata non regge, perché si sta valutando un flusso diverso da quello che viene eseguito.
 
 ### 2.3 Rischi per le persone interessate
 
 | Rischio | Come si manifesta | Gravità |
 |---|---|---|
-| **Valore non rilevato** | Un nome o un numero sfugge al rilevamento e viene comunicato al servizio esterno | `[da compilare]` |
+| **Valore non rilevato** | Un nome o un numero sfugge al rilevamento e viene comunicato al servizio esterno. La verifica umana prima dell'invio è l'unica barriera: se salta, il rischio si realizza e **l'invio non è annullabile** | `[da compilare]` |
 | **Identificabilità indiretta** | Il testo non contiene nomi ma la vicenda descritta identifica comunque la persona | Alta: nessuna misura tecnica la copre |
 | **Categorie senza formato** | Diagnosi, misure disciplinari, permessi di soggiorno: concetti, non formati; il rilevamento non li vede | `[da compilare, alta per medici e scuola]` |
 | **Perdita o furto del dizionario** | Chi ottiene il dizionario ricostruisce il documento originale | Alta |
@@ -99,7 +115,9 @@ Queste sono verificabili nel codice e non richiedono configurazione:
 - **Rapporto di anonimizzazione** senza valori, da archiviare con la pratica.
 
 ### 2.5 Misure che restano a te
-`[da compilare]` — le principali: rilettura umana di ogni testo prima dell'invio; scelta e
+`[da compilare]` — la prima e non negoziabile: **verifica umana del testo pseudonimizzato subito
+prima di ogni invio**, con l'istruzione esplicita di fermarsi davanti agli avvisi dell'app e in
+caso di dubbio. Poi: scelta e
 contrattualizzazione del fornitore (endpoint senza conservazione né addestramento); disco
 cifrato; blocco automatico dello schermo; account personali; cancellazione di dizionari e copie
 a pratica chiusa; formazione delle persone che usano lo strumento; direttiva interna che dica
@@ -128,8 +146,9 @@ dipendenti). Adatta il vocabolario al tuo pubblico.
 > `[se applicabile:]` Il fornitore esterno ha sede in `[Stato]` e la comunicazione avviene sulla
 > base di `[decisione di adeguatezza / Swiss-U.S. Data Privacy Framework / clausole contrattuali
 > tipo]`.
-> Ogni testo viene comunque riletto da una persona prima dell'invio. Potete chiederci in ogni
-> momento quali dati vi riguardano trattiamo e come: `[contatto]`.
+> Ogni testo viene letto e controllato da una persona **prima** di essere inviato, e nessun invio
+> avviene in modo automatico. Potete chiederci in ogni momento quali dati vi riguardano trattiamo
+> e come: `[contatto]`.
 
 ---
 
@@ -141,6 +160,9 @@ dipendenti). Adatta il vocabolario al tuo pubblico.
   di merito, e nei settori più esposti (salute, minori) è la misura che conta più di tutte le
   altre.
 - **Il parere sulla qualificazione del risultato**: con il dizionario attivo l'output è una
-  pseudonimizzazione, cioè ancora un dato personale; senza dizionario l'anonimizzazione è
-  definitiva ma la valutazione sull'identificabilità indiretta resta una valutazione umana.
+  pseudonimizzazione, cioè ancora un dato personale; senza dizionario la sostituzione è
+  irreversibile, ma se il risultato sia un dato anonimo resta una valutazione sul contenuto.
   Su questo serve un consulente, non un modello di documento.
+- **La procedura di verifica scritta**: chi controlla il testo prima dell'invio, con quale
+  attenzione, e che cosa fa quando ha un dubbio. Il modello qui sopra la dichiara come misura;
+  a scriverla nel dettaglio, per le persone che la eseguiranno, sei tu.

@@ -5,6 +5,137 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-06 — la direttiva cantonale del 17 gennaio 2024, e il pubblico che nessuno aveva guardato
+
+Una valutazione a tre lenti per settore (adozione, rischio per l'autore, impatto), con tre
+scettici per ogni premessa della classifica, ha smontato tutte e cinque le premesse. La più
+pesante: il repository non citava le **Direttive del Consiglio di Stato sull'utilizzo di ChatGPT
+e strumenti simili nell'Amministrazione cantonale** (17.01.2024, RG n. 369 del 24.01.2024),
+pubblicate dal DECS su ScuolaLab e applicabili ai docenti (richiamano la LORD). Verificate sul
+PDF originale, non su un riassunto.
+
+- **`docs/RAPPORTO-CONFORMITA-SETTORI.md`**: sezione nuova con il punto 6.1 **testuale** — dati
+  pseudonimizzati ammessi solo con «identificazione impossibile (per esempio tramite
+  l'inferenza)», che e' il limite dichiarato dell'app; dati sensibili, segreto d'ufficio, nomi di
+  uffici e numeri di protocollo elencati **senza** eccezione; «in caso di dubbio astenersi».
+  Citate testualmente anche la risposta CdS n. 4981 del 16.10.2024 (direttive «condivise con i
+  Comuni», progetto cantonale di anonimizzazione delle sentenze), le Direttive DECS n. 196/2014
+  sui dati degli allievi («direttamente o indirettamente») e la LPDP art. 18 cpv. 2 («ne informa
+  l'Incaricato»: informazione, non permesso). Sezione «Fonti e link» in coda, con la distinzione
+  fra fonti verificate sul documento e fonti solo citate.
+- **Scuola, amministrazione pubblica e studi medici** restano come schede ma con la riga «questa
+  scheda non e' un invito»: il caso d'uso scolastico si riduce alle lettere neutre, e per il
+  docente si dichiara l'esposizione che nessuna condizione d'uso copre (doveri di servizio LORD,
+  art. 320 CP). L'autore e' un docente: il canale piu' forte era anche il piu' esposto.
+- **Pubblico riorientato** su quello che la valutazione non aveva visto: **uso personale** (nLPD
+  art. 2 cpv. 2 lett. a: i trattamenti a uso esclusivamente personale sono fuori dalla legge —
+  il genitore, il paziente, l'inquilino), **agenzie immobiliari e amministratori di stabili**
+  (formati densi, nessun regime speciale), **assicurazioni e broker** (la «busta» e' l'intero
+  documento). Schede nuove, tabella riassuntiva con la colonna «questo progetto lo cerca?»,
+  **fiduciarie** separate dalle ditte (mandato, art. 9 nLPD; legge cantonale sui fiduciari citata
+  dalla ricerca e dichiarata non verificata), «il massimo» delle ditte qualificato: vale per i
+  numeri, non per le ragioni sociali (ORG e' l'etichetta piu' debole; «Elettro Bernasconi Sagl»
+  letto come persona in una prova su forme inventate).
+- **Il viaggio di ritorno** nel fondamento comune: il chatbot puo' riscrivere o perdere un
+  segnaposto, il ripristino non puo' inventare; la lettera con «[FULLNAME_1]» dentro e'
+  l'incidente piu' probabile e nessuna scheda diceva di rileggere anche il testo ripristinato.
+- **README e sito**: posizionamento riscritto sul pubblico nuovo, «pseudonimizzazione con
+  rilettura obbligatoria prima di incollare», scuole/uffici/medici nominati come limiti e non
+  come target. Via «for a law firm or a hospital».
+- **`docs/PRESENTAZIONE-STUDI.md`** e **`docs/GUIDA-VALUTAZIONE-INTERNA.md`**: come conoscere il
+  progetto e provarlo su dieci atti veri **senza che un atto esca dallo studio**, mandando solo il
+  Rapporto. La guida dice di controllare il Rapporto prima di inviarlo: contiene il **nome del
+  file** caricato (`input.name`) e l'host (`served_from`) — rinominare i file o togliere la riga.
+  A che cosa serve il Rapporto oltre a questo: verbale per l'incarto, fatti per la DPIA,
+  confronto fra versioni sugli stessi documenti (stessa impronta SHA-256), e per il progetto
+  l'unica misura su atti veri che l'autore accetta: un documento vero nella sua posta lo farebbe
+  detentore di dati coperti da segreto.
+- Non fatto: rinominare «PDF anonimo» (deciso a parte), i badge del sito, la firma dell'installer
+  Windows (freno comune ai settori promossi, segnalato).
+
+## 2026-09-04 — la verifica umana attaccata al gesto: «rileggilo prima di incollarlo»
+
+«Rileggi sempre l'output» e' un buon consiglio nel posto sbagliato: l'utente lo legge una volta,
+al primo avvio, e poi passano settimane. Il momento in cui serve e' un altro, ed e' sempre lo
+stesso: il clic su **Copia testo**, tre secondi prima di incollare in una chat esterna.
+
+- **La scritta che compare quando si copia** diceva «Testo anonimizzato copiato»: un'affermazione
+  di risultato, consegnata all'utente proprio mentre sta per incollare. Ora dice **«Copiato —
+  rileggilo prima di incollarlo»**. Stessa lunghezza, momento identico, contenuto opposto: non
+  «e' fatto», ma «tocca a te». Il popup del bottone lo motiva: **l'invio a un servizio esterno non
+  si annulla**, e non c'e' un secondo controllo dopo quello.
+- ⚠️ **La copia che fallisce ora lo dice.** Provando il messaggio nuovo in un pannello senza
+  fuoco, `navigator.clipboard.writeText` e' stata respinta (`NotAllowedError`) e l'app e' rimasta
+  **muta**: il `.then()` non parte, nessun avviso, nessun errore. Chi preme «Copia testo» crede di
+  avere il testo con i segnaposto negli appunti e incolla quello di prima — che nel caso peggiore
+  e' il documento **originale** copiato pochi minuti prima. Un `.catch()` su entrambi i bottoni di
+  copia (testo anonimizzato e testo ripristinato) e una chiave nuova, `t_copy_fail`: «Copia NON
+  riuscita: negli appunti non c'e' questo testo. Apri "Testo da copiare", selezionalo e copialo a
+  mano». Invariante 5 applicato al gesto piu' frequente dell'app; il permesso agli appunti puo'
+  mancare per la finestra senza fuoco, per un contesto non sicuro o per una scelta dell'utente, e
+  nessuno di questi casi deve somigliare a un successo.
+- **Il velo del primo avvio** apre ora con la stessa frase e con la parola giusta:
+  «Prima di incollare in un chatbot, la verifica umana e' obbligatoria. Non consigliata:
+  obbligatoria». Il punto nomina il gesto (incollare), lo strumento (ChatGPT o altro) e la ragione
+  (l'invio non si annulla). La versione precedente diceva «rileggi prima di condividerlo», che e'
+  la stessa cosa detta in modo che non chiama nessuno in causa.
+- **`docs/RAPPORTO-CONFORMITA-SETTORI.md`**: due premesse in testa, prima di ogni scheda —
+  la verifica umana prima di incollare e' obbligatoria, e **pseudonimizzare non autorizza**. Le
+  stesse due regole chiudono poi **ogni scheda di settore**, sotto un titolo identico («Le due
+  regole che non cambiano») ma dette nella lingua di quel settore: chi legge solo la propria
+  pagina — ed e' quello che fa un capoufficio — le trova comunque. Verbatim cinque volte
+  sarebbero saltate a tutti dopo la prima; declinate no. Per la scuola la verifica la deve fare
+  chi conosce la classe, per il medico chi ha in cura il paziente, per l'avvocato e' l'ultimo
+  momento in cui la cosa dipende ancora da lui e non dal fornitore, per l'indipendente e' l'unico
+  controllo che esiste. Corretti insieme due residui che dicevano ancora «anonimizzati». La
+  tabella riassuntiva chiarisce che le stelle non sostituiscono la rilettura nemmeno dove la
+  copertura e' massima, e il primo dei tre limiti (la persona riconoscibile dal racconto) dice
+  perche' quella verifica non e' sfiducia nello strumento: e' il solo controllo che copre il caso.
+- **`docs/MODELLI-DOCUMENTAZIONE.md`**: la verifica umana entra nella **catena tecnica** della
+  valutazione d'impatto, non nelle raccomandazioni finali — senza di essa il flusso valutato non
+  e' quello eseguito, e la proporzionalita' affermata non regge. Nel registro diventa una misura
+  organizzativa con i suoi campi da compilare (chi la fa, come e' formato, quale direttiva la
+  impone); nell'informativa: «nessun invio avviene in modo automatico».
+- Vocabolario allineato ovunque: quello che esce e' un testo **pseudonimizzato**, dato personale
+  finche' esiste il dizionario; senza dizionario la sostituzione e' irreversibile, ma se il testo
+  sia anonimo lo decide una valutazione sul contenuto, non il programma.
+- Non fatto, e perche': rinominare il bottone «Anonimizza» in «Oscura». Oscurare e' quello che
+  fanno i riquadri manuali (i pixel spariscono davvero), mentre il bottone sostituisce con
+  segnaposto leggibili e reversibili: prendere in prestito il nome di un altro gesto confonde piu'
+  di quanto chiarisca, e un verbo vago non e' un verbo preciso. L'etichetta che merita attenzione
+  e' semmai **«PDF anonimo»** sul bottone di scaricamento — unica affermazione di risultato rimasta
+  nell'interfaccia, e per giunta gia' chiamata «PDF censurato» due centimetri piu' in la', nella
+  vista d'anteprima.
+
+## 2026-09-04 — il velo del primo avvio dice le due cose che contano davvero (Condizioni rev. 2)
+
+Il velo elencava tre fatti giuridici corretti e freddi. Mancavano le due frasi che cambiano il
+comportamento di chi legge, e sono quelle che un utente in uno studio o in una scuola deve avere
+in testa prima del primo documento.
+
+- **«La supervisione umana non è delegabile»** al primo posto, non in mezzo: il rilevamento è
+  statistico, e la rilettura non la fa nessun controllo automatico — «questa compresa», dice il
+  testo, perché anche gli avvisi dell'app sono un aiuto, non una garanzia.
+- **«Rispetta le regole di chi risponde dei dati»**, punto nuovo: se si lavora per uno studio, una
+  scuola, un ente o un'azienda, il titolare del trattamento è **quell'organizzazione**, e valgono
+  le sue direttive su quali documenti escono e verso quali servizi. La frase che chiude il punto è
+  quella che serviva: **anonimizzare non autorizza**. Un divieto posto da una direttiva interna,
+  dal segreto professionale o da una norma resta tale anche quando esce solo un segnaposto. Senza
+  questa riga, il primo velo si poteva leggere come un lasciapassare.
+- **Definizione stretta**: «strumento di supporto alla **pseudonimizzazione**». Col dizionario
+  attivo è pseudonimizzazione per definizione; spegnendolo nessuna chiave viene creata, ma **se il
+  risultato sia un dato anonimo lo decide una valutazione, non il programma**. Dire
+  «anonimizzatore» invita la conclusione sbagliata — «non è più un dato personale, posso mandarlo
+  dove voglio» — che è falsa in un modo e indimostrata nell'altro. Stessa disciplina del «via GDPR
+  compliant dalla tagline»: si dichiara l'operazione, non l'esito giuridico.
+- Allineati insieme al velo, o direbbero cose diverse: `TERMS.md` (§1, §4, riassunto inglese), la
+  scheda **Condizioni** dentro l'app, e il promemoria del blocco schermo — che ora rimanda alla
+  direttiva informatica dell'ente, dove quasi sempre l'obbligo esiste già.
+- ⚠️ **`TERMS_VERSION` a `2026-09-04r2`**: il testo è cambiato nella sostanza e chi aveva già
+  accettato la versione del mattino non l'avrebbe mai vista. La presa visione è per versione, e
+  una versione nuova nello stesso giorno ha bisogno di una revisione nel numero, altrimenti
+  l'ack vecchio copre un testo che non è più quello.
+
 ## 2026-09-04 — smoke PDF: il campo modulo va provato in ENTRAMBI i modi (sostituito / eliminato)
 
 Lo smoke `src/app/smoke_pdf_export.py` falliva su `check("campi modulo ripuliti", rep["widgets"] > 0)`:

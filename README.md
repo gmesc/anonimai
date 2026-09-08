@@ -46,9 +46,19 @@ covers — and drives a fully **reversible** anonymization workflow:
 
 </div>
 
-It is built for law firms, accountants, notaries and anyone bound by the **GDPR** or the Swiss
-**nLPD** who wants to keep using ChatGPT / Claude / Gemini on sensitive documents **without ever
-sending the real data out**.
+**Who it is for.** First of all, **people handling their own paperwork**: the parent writing to the
+school, the patient reading a report, the tenant with a lease, anyone preparing a letter to an
+insurer or a tax office. Then the small professional working **one document at a time**: the
+independent, the micro-business, the real-estate agency or property manager, the small notary or
+law office on formatted deeds, the insurer's back office. What these have in common: documents
+made of identifiers with a fixed shape (names, addresses, AVS/IBAN/UID numbers, amounts, land
+registry references) rather than a story that identifies someone on its own. It is a
+**pseudonymisation** tool: the real data stays on your machine, placeholders go to ChatGPT /
+Claude / Gemini, and **you re-read the placeholder text before you paste it** — that check is
+mandatory, not optional. Schools, public offices and medical practices are described in
+[docs/RAPPORTO-CONFORMITA-SETTORI.md](docs/RAPPORTO-CONFORMITA-SETTORI.md) as **limits**, not as
+targets: the Ticino directive of 17 January 2024 on ChatGPT in the cantonal administration and the
+nature of clinical or pedagogical texts make them the wrong first audience.
 
 > **What it is, in one sentence.** A *support tool* for pseudonymisation: it runs on your machine,
 > the authors never see your data, **you remain the data controller and the final human review of
@@ -90,8 +100,9 @@ People summarize contracts, draft replies and ask legal questions simply by **pa
 document in**. It is fast and useful — and it quietly moves enormous amounts of personal and
 confidential data off the user's device. Names, addresses, tax codes, IBANs, health details,
 unsigned-contract clauses: all of it crosses the network to servers the user does not control,
-where it may be logged, cached, retained or exposed in a breach. For a law firm or a hospital this
-is not hypothetical; under the GDPR it can be a direct compliance failure.
+where it may be logged, cached, retained or exposed in a breach. For a small office, and for a
+private person pasting their own medical report, this is not hypothetical; under the GDPR and the
+Swiss nLPD it can be a direct failure of the duties that apply to the sender.
 
 The intuitive fix is to **stop sending data out** and run an open model locally — but a
 frontier-grade open model is large and expensive to serve (€9,000–€10,000 of hardware), and the
