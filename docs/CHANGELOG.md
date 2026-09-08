@@ -5,6 +5,26 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-06 — le due barre di comandi tornano sulla stessa griglia
+
+Segnalato a vista sulla fascia in fondo alle due colonne. Misurato invece che dedotto, con i
+rettangoli reali a dodici larghezze: verticalmente erano gia' allineate (stessa cima, stessi
+40px di `--ctl-h`), il difetto era orizzontale e veniva da due cause indipendenti.
+
+- **Passo diverso.** `.row` aveva `gap:9px`, `.row.acts` — la barra di sinistra — `gap:8px`. Due
+  file di controlli che stanno sulla stessa banda e che l'occhio confronta avevano un passo
+  diverso, e su quattro bottoni la differenza si accumula in 3px di deriva. Ora il passo e' 8px
+  per tutte le righe dell'app; il `gap` ridondante in `.row.acts` e' tolto, con la nota che il
+  valore viene da `.row`.
+- **Il separatore rubava un pixel.** La linea verticale fra le colonne era il `border-left` della
+  card di destra: entrando nel box, spostava tutto il suo contenuto: i bottoni di destra
+  partivano a **17px** dal bordo della loro card, quelli di sinistra a **16**. Ora la stessa
+  linea la disegna un `box-shadow:-1px 0 0 var(--line)`, che non occupa larghezza. Le due colonne
+  cadono sulla stessa griglia e il separatore si vede come prima (contenitore `overflow:visible`,
+  verificato).
+
+Dopo: rientro 16 = 16, passo 8 = 8, cime identiche, a 900/1100/1280/1440/1600/1900/2400 px.
+
 ## 2026-09-06 — la direttiva cantonale del 17 gennaio 2024, e il pubblico che nessuno aveva guardato
 
 Una valutazione a tre lenti per settore (adozione, rischio per l'autore, impatto), con tre

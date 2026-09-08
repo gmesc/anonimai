@@ -1061,7 +1061,7 @@ body:has(.app.has-result){height:auto;overflow:visible}
    Quando la colonna si stringe cadono prima le cose che si possono dedurre —
    la scorciatoia, poi la parola "reversibile", poi l'etichetta intera: lo
    switch col suo badge e la ⓘ restano sempre. */
-.row.acts{flex-wrap:nowrap;gap:8px;min-width:0}
+.row.acts{flex-wrap:nowrap;min-width:0}   /* il gap e' quello di .row: 8px per tutti */
 .row.acts .btn,.row.acts .ghost{flex:0 0 auto}
 /* lo switch cede spazio prima dei bottoni, e dentro di lui cede SOLO
    l'etichetta: interruttore, badge di stato e ⓘ non si tagliano mai. */
@@ -1102,7 +1102,7 @@ html[data-theme="scuro"] #thTog .mo{opacity:1}
    topbar (che porta gia' la sua linea). Il margine interno resta in .bd. */
 .card{background:var(--panel);border:0;display:flex;
       flex-direction:column;overflow:hidden;min-height:0}
-.workspace > .card + .card,.grid > .card + .card{border-left:1px solid var(--line)}
+.workspace > .card + .card,.grid > .card + .card{box-shadow:-1px 0 0 var(--line)}
 /* la testata di ogni riquadro E' una .tbar (skill §5bis) e sta SEMPRE su una
    riga: niente wrap — cedono gli elementi elastici (nome file, hint) in
    ellipsis, e sotto una certa larghezza della COLONNA (@container, non @media:
@@ -1177,7 +1177,7 @@ textarea.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace,v
 #dropOverlay .dz span{font-size:13px}
 
 /* bottoni fuori dalle barre: due sole facce, azione (teal) e neutra */
-.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:12px;flex:none}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;flex:none}
 button{font-family:var(--font-text),var(--emoji-font),sans-serif}
 .btn{height:var(--ctl-h);border:1px solid transparent;border-radius:0;cursor:pointer;
      display:inline-flex;align-items:center;gap:.5rem;padding:0 1.1rem;
