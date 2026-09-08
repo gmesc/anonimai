@@ -1203,6 +1203,8 @@ button:disabled{opacity:.45;cursor:default}
 .app.has-result #src,.app.has-result #anon,.app.has-result .view{flex:none;height:60vh}
 #pane2 textarea,#pane2 .view{min-height:60vh}
 @media(max-width:920px){
+  /* impilato e scorrevole: lo split non ha senso, e la maniglia nemmeno */
+  #dictSplit,#dictMax{display:none!important}
   .grid{grid-template-columns:1fr}
   body,.app{height:auto;overflow:visible}
   .workspace{grid-template-columns:1fr;grid-template-rows:none;flex:none;min-height:auto}
@@ -1283,11 +1285,33 @@ td{padding:8px;border-bottom:1px solid var(--line-weak);vertical-align:top}
 td.k{font-family:ui-monospace,Consolas,var(--emoji-font),monospace;font-weight:600;white-space:nowrap}
 td.v{word-break:break-word}
 tr:hover td{background:var(--hover)}
+/* ---- fork: il dizionario si alza e si ridimensiona --------------------------
+   L'altezza della tabella e' un token (--dict-h): la maniglia lo scrive
+   trascinando, il chevron lo scavalca mostrando il dizionario a tutta finestra.
+   Il modello di scorrimento della pagina non cambia: sotto i 920px, dove tutto
+   e' impilato e scorre, maniglia e chevron non compaiono. ---- */
+#dictSplit{height:8px;margin:8px 0 0;cursor:row-resize;position:relative;flex:none}
+#dictSplit::before{content:"";position:absolute;left:0;right:0;top:3px;height:1px;
+     background:var(--line);transition:height var(--speed),background var(--speed)}
+#dictSplit:hover::before,html[data-dictresize="1"] #dictSplit::before{
+     height:3px;top:2px;background:var(--primary)}
+html[data-dictresize="1"]{cursor:row-resize}
+html[data-dictresize="1"] *{transition:none!important;user-select:none}
+html[data-dictresize="1"] iframe,html[data-dictresize="1"] img{pointer-events:none}
+#dictMax{margin-left:-.45rem}
+#dictMax .chev{display:inline-block;font-size:13px;line-height:1;
+     transition:transform var(--speed)}
+html[data-dict="max"] #dictMax .chev{transform:rotate(180deg)}
+/* massimizzato: le due colonne si tolgono di mezzo e il dizionario prende tutto */
+html[data-dict="max"] .app.has-result .workspace,
+html[data-dict="max"] #dictSplit{display:none!important}
+html[data-dict="max"] .dict{margin-top:0}
+html[data-dict="max"] .dict .tablewrap{max-height:none;height:auto}
 .dict{margin-top:16px;flex:none}
 .dict .bd{padding:0;display:block}
 .dict .meta{padding:13px 16px 6px}
 .dict .legend{padding:0 16px 12px;border-top:none}
-.dict .tablewrap{max-height:300px;overflow:auto;padding:0 16px 16px}
+.dict .tablewrap{max-height:var(--dict-h,300px);overflow:auto;padding:0 16px 16px}
 
 /* pannello Ripristina */
 .pane{display:none}
@@ -1572,9 +1596,16 @@ tr:hover td{background:var(--hover)}
       </div>
     </div>
 
+    <!-- fork: maniglia orizzontale fra le colonne e il dizionario (skill §4:
+         8px di presa, linea 1px che a hover diventa 3px, row-resize) -->
+    <div id="dictSplit" role="separator" aria-orientation="horizontal"
+         data-i18n-title="dict_drag" style="display:none"></div>
+
     <!-- dizionario: staccato, a tutta larghezza sotto le due colonne, scrollabile -->
     <div class="card dict" id="dictCard" style="display:none">
       <div class="hd">
+        <button class="tbtn" id="dictMax" onclick="toggleDictMax()"
+                data-i18n-title="dict_max" aria-expanded="false"><span class="chev">⌃︎</span></button>
         <h2 data-i18n="dict_title">Dizionario reversibile</h2>
         <div class="right hint" id="dictHint" data-i18n="dict_hint">resta solo qui, in locale</div>
       </div>
@@ -1802,6 +1833,8 @@ const T = {
     +" ("+r+" non redatti, "+s+" troppo corti per essere cercati): controlla il file"
     +" prima di condividerlo",
   dict_title:"Dizionario reversibile", dict_hint:"resta solo qui, in locale",
+  dict_max:"Ingrandisci il dizionario a tutta finestra", dict_min:"Rimetti le colonne",
+  dict_drag:"Trascina per cambiare l'altezza del dizionario (o frecce su/giù)",
   th_id:"ID", th_val:"Valore originale", th_type:"Tipo",
   callout:"Incolla qui la <b>risposta dell'LLM</b> (che contiene i placeholder come <span class=\"kbd\">[FULLNAME_1]</span>): l'app rimette i valori veri usando il dizionario di questa sessione. Se hai chiuso e riaperto l'app, <b>carica il dizionario .json</b> che avevi salvato.",
   r_title1:"Risposta con i placeholder", loaddict:"📁 Carica dizionario",
@@ -1900,6 +1933,8 @@ const T = {
     +" ("+r+" not redacted, "+s+" too short to be searched safely): check the file"
     +" before sharing it",
   dict_title:"Reversible dictionary", dict_hint:"stays here only, locally",
+  dict_max:"Expand the dictionary to the full window", dict_min:"Bring the columns back",
+  dict_drag:"Drag to resize the dictionary (or up/down arrows)",
   th_id:"ID", th_val:"Original value", th_type:"Type",
   callout:"Paste here the <b>LLM's answer</b> (containing placeholders like <span class=\"kbd\">[FULLNAME_1]</span>): the app puts the real values back using this session's dictionary. If you closed and reopened the app, <b>load the .json dictionary</b> you saved.",
   r_title1:"Answer with placeholders", loaddict:"📁 Load dictionary",
@@ -2293,6 +2328,7 @@ function render(){
   const d=DATA;
   dropDoc(OUT_DOC);OUT_DOC=null;$('pdfOutView').innerHTML='';  // risultato nuovo -> il PDF censurato va rifatto
   $('dictCard').style.display='';            // mostra la card dizionario (sotto le due colonne)
+  $('dictSplit').style.display='';           // ...e la maniglia che la ridimensiona
   document.querySelector('.app').classList.add('has-result');  // -> scroll pagina, niente schiacciamento
   // preview evidenziata
   const prev=$('prev');prev.innerHTML='';prev.style.display='';$('emptyPrev').style.display='none';
@@ -2501,6 +2537,45 @@ $('dictFile').onchange=e=>{const f=e.target.files[0];if(!f)return;
 
 /* ---- input helpers ---- */
 $('go').onclick=run;
+/* ---- fork: il dizionario si alza (chevron) e si ridimensiona (maniglia) ----
+   Due gesti sullo stesso pezzo: il chevron lo porta a tutta finestra togliendo
+   di mezzo le colonne, la maniglia ne regola l'altezza scrivendo --dict-h.
+   L'attributo data-dictresize durante il trascinamento spegne le transizioni e
+   la selezione del testo (skill §4): senza, il puntatore seleziona mezza pagina
+   mentre si trascina. */
+function toggleDictMax(){
+  const on=document.documentElement.getAttribute('data-dict')==='max';
+  document.documentElement.setAttribute('data-dict',on?'':'max');
+  $('dictMax').setAttribute('aria-expanded',String(!on));
+  $('dictMax').title=tt(on?'dict_max':'dict_min');
+  if(on)window.scrollTo({top:0});         // tornando indietro si riparte dall'alto
+}
+(()=>{
+  const h=$('dictSplit'); let y0=0,h0=0;
+  const alto=()=>Math.round(Math.min(window.innerHeight*.85,
+                 parseFloat(getComputedStyle($('tablewrap')).maxHeight)||300));
+  const muovi=e=>{
+    // trascinando verso l'ALTO la tabella cresce: la maniglia sta sopra di lei
+    const nuova=Math.max(120,Math.min(window.innerHeight*.85,h0+(y0-e.clientY)));
+    document.documentElement.style.setProperty('--dict-h',Math.round(nuova)+'px');
+  };
+  const stop=()=>{document.documentElement.removeAttribute('data-dictresize');
+    document.removeEventListener('mousemove',muovi);document.removeEventListener('mouseup',stop);};
+  h.addEventListener('mousedown',e=>{
+    e.preventDefault(); y0=e.clientY; h0=alto();
+    document.documentElement.setAttribute('data-dictresize','1');
+    document.addEventListener('mousemove',muovi);document.addEventListener('mouseup',stop);
+  });
+  // da tastiera: le frecce spostano di 40px, come una maniglia vera
+  h.tabIndex=0;
+  h.addEventListener('keydown',e=>{
+    const d=e.key==='ArrowUp'?40:e.key==='ArrowDown'?-40:0; if(!d)return;
+    e.preventDefault();
+    document.documentElement.style.setProperty('--dict-h',
+      Math.round(Math.max(120,Math.min(window.innerHeight*.85,alto()+d)))+'px');
+  });
+})();
+
 /* ---- fork: svuotare la sessione ------------------------------------------
    Un posto solo per due gesti: «Pulisci» (esplicito) e lo svuotamento dopo sette
    minuti di inattivita'. Togliere il documento dallo schermo non basta: vive anche
@@ -2520,7 +2595,9 @@ function wipeSession(keepSaved){
   $('src').value='';$('pdf').value='';$('fileName').textContent='';
   DATA=null;$('prev').style.display='none';$('emptyPrev').style.display='';
   $('anon').value='';$('meta').innerHTML='';$('legend').innerHTML='';
-  $('dictCard').style.display='none';$('ulock').textContent='';
+  $('dictCard').style.display='none';$('dictSplit').style.display='none';
+  document.documentElement.setAttribute('data-dict','');   // Pulisci esce dal massimizzato
+  $('ulock').textContent='';
   if(!(keepSaved&&PERSIST())){
     // la card era solo nascosta: senza queste righe il dizionario resta in MAP e su
     // disco, e al riavvio ricompare zitto al posto di quello del documento nuovo

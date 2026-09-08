@@ -5,6 +5,29 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-08 — il dizionario si alza e si ridimensiona
+
+Con un documento vero il dizionario e' la parte che si guarda di piu' (153 voci su un referto
+neuropsicologico), e stava in una tabella alta 300px fissi sotto due colonne da 60vh.
+
+- **Chevron nella testata** (`#dictMax`, un `.tbtn`): porta il dizionario a tutta finestra fino
+  alla testata dell'app, togliendo di mezzo le colonne (`html[data-dict="max"]`). Il glifo ruota,
+  il titolo cambia («Ingrandisci» / «Rimetti le colonne»), `aria-expanded` segue. «Pulisci» esce
+  dal massimizzato, altrimenti si resterebbe in una vista senza comandi.
+- **Maniglia trascinabile** (`#dictSplit`) fra le colonne e il dizionario, con la grammatica delle
+  maniglie della skill §4: 8px di area di presa, linea 1px che a `:hover` diventa 3px `--primary`,
+  `cursor:row-resize`, e `html[data-dictresize="1"]` durante il trascinamento — spegne le
+  transizioni e la selezione del testo, che altrimenti il puntatore seleziona mezza pagina.
+  Trascinando verso l'alto la tabella cresce (la maniglia sta sopra di lei); l'altezza e' un token,
+  `--dict-h`, fra 120px e l'85% della finestra. Anche da tastiera: la maniglia e' raggiungibile
+  con Tab e le frecce su/giu' la muovono di 40px.
+- Sotto i 920px, dove tutto e' impilato e la pagina scorre, maniglia e chevron non compaiono:
+  non avrebbero niente da ridimensionare.
+
+Non fatto: ricordare l'altezza fra le sessioni. Sarebbe una riga di `localStorage`, ma e' stato
+appena tolto tutto cio' che restava su disco senza che l'utente lo chiedesse: se serve, si aggiunge
+dichiarandolo.
+
 ## 2026-09-06 — l'app passata al setaccio del design system StudIA
 
 Audit completo con la procedura della skill `studia-app-layout` §8bis: misurato
