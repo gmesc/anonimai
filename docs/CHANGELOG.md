@@ -5,6 +5,43 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-06 — l'app passata al setaccio del design system StudIA
+
+Audit completo con la procedura della skill `studia-app-layout` §8bis: misurato
+sull'app viva (`getBoundingClientRect` di ogni controllo) in **dodici stati** — vista base nei due
+temi, con un risultato a schermo, le sei schede delle Impostazioni, i Tag, i tre veli, la modalita'
+Ripristina — piu' un passaggio statico sul CSS. Le altezze erano gia' tutte nelle tre famiglie
+(30 `--tb-h`, 33 `--tbig-h`, 40 `--ctl-h`), i raggi tutti a zero salvo le due eccezioni ammesse, e
+`assets/tokens.css` e' la copia conforme della skill (differisce solo per il percorso del font, che
+qui e' servito da `/assets/`). Quattro cose fuori posto, tutte corrette.
+
+- **Lo stack dei font metteva il generico prima dell'emoji-font** in sei regole monospace
+  (`td.k`, `.cfg-body code`, `.kbd`, `.tg-row .nm`, `.ct-row .nm`, `textarea.mono`). Il generico
+  cattura tutto: con `monospace` prima di `var(--emoji-font)` le emoji e i simboli tornavano al
+  font di sistema. Ordine ripristinato: testo, emoji, generico.
+- **Un'ombra a riposo** sul pallino dello switch (`0 1px 3px rgba(0,0,0,.28)`): era l'unica rimasta
+  su un elemento inline. Tolta — il pallino ha gia' contrasto pieno sul fondo teal e su quello giallo.
+- **`.seg-tabs` era un dialetto**: ricopiava riga per riga `.tseg` di `tokens.css` (stessa altezza
+  `--tb-h`, stesso hover, stesso acceso teal 26%). Ora il markup usa `.tseg` e nel CSS resta solo
+  cio' che il sistema non sa: l'alias `.tseg button.on` (l'app marca l'attivo con una classe, non
+  con `aria-pressed` — alias invece di riscrivere il JS, come prescrive la skill) e le etichette
+  che non vanno a capo. Undici righe di CSS in meno.
+- **`tests/test_design_system.py`** (7 prove, senza modello): tiene ferme le promesse verificabili
+  sul sorgente — ordine dello stack dei font, nessuna ombra a riposo, nessun raggio fuori dalle
+  eccezioni, mai `outline:none`, nessun ritorno di `.seg-tabs`, e nessuna misura scritta a mano
+  dentro una regola di barra. Suite: **128 test verdi**.
+
+Due falsi positivi, verificati e non «corretti»: le schede `.tab` a 49px NON sono un'omonimia
+accidentale ma il componente vero dei token (il conteggio delle omonimie ne segnalava sedici, tutte
+componenti del sistema usati come tali); e le tre regole `:focus` dell'app stanno sui **campi di
+testo**, dove la skill §7 vuole l'anello anche col mouse — sui bottoni comanda gia' il
+`:focus-visible` dei token, e in tutta l'app non c'e' un solo `outline:none`.
+
+Nota di metodo: la prima passata dell'audit dava due anomalie (una casella di testo a 26px, uno
+switch a 21px) che si sono rivelate artefatti del **pannello del browser nascosto**, cioe' con
+viewport 0x0: `60vh` di zero e' zero. Le misure valgono solo su una finestra vera — controllare
+`window.innerWidth` prima di credere a un numero.
+
 ## 2026-09-06 — le due barre di comandi tornano sulla stessa griglia
 
 Segnalato a vista sulla fascia in fondo alle due colonne. Misurato invece che dedotto, con i

@@ -1119,7 +1119,7 @@ html[data-theme="scuro"] #thTog .mo{opacity:1}
 .card .hd .tbnota,.card .hd .hint{flex:0 1 auto;min-width:0;overflow:hidden;
                  text-overflow:ellipsis;white-space:nowrap}
 .card .hd .right .hint{flex:0 1 auto}
-.seg-tabs button,#boxBtn{white-space:nowrap}
+.tseg button,#boxBtn{white-space:nowrap}
 /* colonna stretta: via l'etichetta di Riquadri (resta ✏️ + contatore)... */
 @container (max-width: 640px){
   .card .hd .hint{display:none}
@@ -1129,7 +1129,7 @@ html[data-theme="scuro"] #thTog .mo{opacity:1}
 /* ...piu' stretta ancora: rientri e zoom ridotti (specificita' >= delle
    regole base, che nel foglio vengono DOPO e a parita' vincerebbero) */
 @container (max-width: 520px){
-  .card .hd .seg-tabs button{padding:0 .38rem;letter-spacing:.03em}
+  .card .hd .tseg button{padding:0 .38rem;letter-spacing:.03em}
   .card .hd .zoomg .lvl{min-width:38px}
   .card .hd .zoomg button{min-width:22px;padding:0 .25rem}
   /* ultimo a cedere: il titolo si tronca, i comandi restano interi */
@@ -1139,13 +1139,7 @@ html[data-theme="scuro"] #thTog .mo{opacity:1}
 .card .bd{padding:14px 16px;flex:1;min-height:0;display:flex;flex-direction:column}
 
 /* comandi di testata: stessi vestiti dei .tbtn */
-.seg-tabs{display:inline-flex;align-items:center;height:var(--tb-h)}
-.seg-tabs button{border:0;background:transparent;color:var(--ink);cursor:pointer;height:100%;
-     padding:0 var(--tb-pad-x);font-size:var(--tb-fs);font-weight:var(--tb-peso);
-     letter-spacing:var(--tb-track);text-transform:uppercase;border-radius:0;
-     transition:background var(--speed)}
-.seg-tabs button:hover{background:var(--hover)}
-.seg-tabs button.on{background:color-mix(in srgb,var(--teal) 26%,var(--panel));
+.tseg button.on{background:color-mix(in srgb,var(--teal) 26%,var(--panel));
      color:var(--teal-strong)}
 #boxBtn{height:var(--tb-h);min-width:var(--tb-min);border:0;border-radius:0;
      background:transparent;color:var(--ink);padding:0 var(--tb-pad-x);
@@ -1162,7 +1156,7 @@ textarea{width:100%;flex:1;min-height:0;resize:none;border:1px solid var(--line)
          color:var(--ink);background:var(--bg);
          font-family:var(--font-text),var(--emoji-font),sans-serif}
 textarea:focus{outline:2px solid var(--primary);outline-offset:-2px}
-textarea.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace,var(--emoji-font);font-size:13px}
+textarea.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,var(--emoji-font),monospace;font-size:13px}
 
 /* drag&drop su tutta la finestra: overlay flottante (bordo + ombra) */
 #dropOverlay{position:fixed;inset:0;z-index:90;display:none;align-items:center;
@@ -1286,7 +1280,7 @@ th{position:sticky;top:0;background:var(--panel);text-align:left;color:var(--mut
    font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.08em;
    padding:8px;border-bottom:1px solid var(--line)}
 td{padding:8px;border-bottom:1px solid var(--line-weak);vertical-align:top}
-td.k{font-family:ui-monospace,Consolas,monospace;font-weight:600;white-space:nowrap}
+td.k{font-family:ui-monospace,Consolas,var(--emoji-font),monospace;font-weight:600;white-space:nowrap}
 td.v{word-break:break-word}
 tr:hover td{background:var(--hover)}
 .dict{margin-top:16px;flex:none}
@@ -1320,7 +1314,7 @@ tr:hover td{background:var(--hover)}
 .cfg-body ul{margin:0 0 10px 1.1rem;font-size:13px;line-height:1.6}
 .cfg-body li{margin:.25rem 0}
 .cfg-body a{color:var(--blue-strong);font-weight:700}
-.cfg-body code{font-family:ui-monospace,Consolas,monospace;font-size:12px;
+.cfg-body code{font-family:ui-monospace,Consolas,var(--emoji-font),monospace;font-size:12px;
         background:var(--hover);padding:1px 5px}
 .cfg-body .kv{display:flex;gap:.6rem;font-size:12.5px;padding:.45rem 0;
         border-bottom:1px solid var(--line-weak)}
@@ -1338,7 +1332,7 @@ tr:hover td{background:var(--hover)}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 #toast.ok{border-left-color:var(--teal)}
 #toast.ok::before{content:"✓";color:var(--teal-strong);font-weight:800}
-.kbd{font-family:ui-monospace,Consolas,monospace;background:var(--hover);
+.kbd{font-family:ui-monospace,Consolas,var(--emoji-font),monospace;background:var(--hover);
      border:1px solid var(--line-weak);padding:1px 6px;font-size:11px;color:var(--muted)}
 
 /* switch "Dizionario reversibile": ON = teal, OFF = attenzione (giallo).
@@ -1363,8 +1357,7 @@ tr:hover td{background:var(--hover)}
 .tsw{position:relative;width:38px;height:21px;border-radius:999px;background:var(--teal-strong);
      border:0;padding:0;flex:none;cursor:pointer;transition:background var(--speed)}
 .tsw .knob{position:absolute;top:3px;left:3px;width:15px;height:15px;border-radius:50%;
-           background:var(--panel);transition:transform var(--speed);
-           box-shadow:0 1px 3px rgba(0,0,0,.28)}
+           background:var(--panel);transition:transform var(--speed)}
 .tsw.off{background:var(--yellow-strong)}
 .tsw.off .knob{transform:translateX(17px)}
 .mapsw .st{font-size:9.5px;font-weight:800;letter-spacing:.1em;padding:2px 7px;
@@ -1444,7 +1437,7 @@ tr:hover td{background:var(--hover)}
               flex:none;cursor:pointer}
 .tg-row .sw{width:10px;height:10px;margin-top:5px;flex:none}
 .tg-row .txt{min-width:0}
-.tg-row .nm{font-family:ui-monospace,Consolas,monospace;font-size:12px;font-weight:700}
+.tg-row .nm{font-family:ui-monospace,Consolas,var(--emoji-font),monospace;font-size:12px;font-weight:700}
 .tg-row .ds{font-size:12.5px;color:var(--muted);line-height:1.45}
 .tg-row .ex{font-size:11px;color:var(--muted);opacity:.75}
 .tg-row.off{opacity:.55}
@@ -1467,7 +1460,7 @@ tr:hover td{background:var(--hover)}
 .ct-row:last-child{border-bottom:0}
 .ct-row .val{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
              font-size:12.5px}
-.ct-row .nm{font-family:ui-monospace,Consolas,monospace;font-size:11px;font-weight:700;flex:none}
+.ct-row .nm{font-family:ui-monospace,Consolas,var(--emoji-font),monospace;font-size:11px;font-weight:700;flex:none}
 .ct-row .rm{border:0;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;
             padding:0 4px;flex:none}
 .ct-row .rm:hover{color:var(--err-ink)}
@@ -1515,7 +1508,7 @@ tr:hover td{background:var(--hover)}
             </span>
             <button id="boxBtn" style="display:none" onclick="toggleBoxMode()"
                     title="Riquadri manuali per firme e timbri">✏️ <span data-i18n="box_btn">Riquadri</span><span class="n" id="boxCount"></span></button>
-            <div class="seg-tabs" id="srcTabs" style="display:none">
+            <div class="tseg" id="srcTabs" style="display:none">
               <button class="on" id="sPdf" onclick="setSrcView('pdf')" data-i18n="v_pdf">Anteprima PDF</button>
               <button id="sText" onclick="setSrcView('text')" data-i18n="v_raw">Testo</button>
             </div>
@@ -1546,7 +1539,7 @@ tr:hover td{background:var(--hover)}
         <div class="hd">
           <h2 data-i18n="out_title">② Risultato</h2>
           <div class="right">
-            <div class="seg-tabs">
+            <div class="tseg">
               <button class="on" id="vPrev" onclick="setView('prev')" data-i18n="v_prev">Anteprima</button>
               <button id="vText" onclick="setView('text')" data-i18n="v_text">Testo da copiare</button>
               <button id="vPdf" onclick="setView('pdf')" data-i18n="v_opdf">PDF censurato</button>
