@@ -10,7 +10,9 @@ I limiti noti sono dichiarati in `docs/CHANGELOG.md` (voce più recente) e in `d
 Un difetto che lascia **dati personali in chiaro** nell'output, che fa uscire dati dalla macchina, o
 che espone il server senza che l'utente lo sappia è una vulnerabilità. Segnalala **in privato**:
 
-- email: giacomo@insegnai.ch (oggetto: `[anonimai security]`);
+- email: giacomo@insegnai.ch (oggetto: `[anonimai security]`). La casella è ospitata da
+  **Infomaniak** (Ginevra): posta e allegati restano su data center in Svizzera, certificati
+  **ISO 27001**, e non escono da lì. Dettagli e limiti in [PRIVACY.md](PRIVACY.md);
 - oppure GitHub → Security → *Report a vulnerability* sul repository `gmesc/anonimai`.
 
 **Non aprire una issue pubblica** con documenti veri o valori personali: usa dati inventati.

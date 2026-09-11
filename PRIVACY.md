@@ -16,10 +16,40 @@ Questa informativa esiste perché in **tre** punti, tutti facoltativi e tutti fu
 decidere di scrivermi. Lì i tuoi dati arrivano a me, e allora hai diritto di sapere che cosa ne
 faccio.
 
-## 2. Chi sono
+## 2. Chi sono, e dove arriva quello che mi scrivi
 
 Giacomo Meschini, Canton Ticino, Svizzera. Contatto: **giacomo@insegnai.ch**.
 Sviluppo AnonimAI come progetto open source personale, senza società e senza fatturarlo.
+
+**La casella di posta è ospitata da [Infomaniak](https://www.infomaniak.com/), a Ginevra.** Non è
+un dettaglio tecnico: è il motivo per cui quello che mi scrivi non lascia la Svizzera. Infomaniak
+si impegna per contratto a «conservare i tuoi dati esclusivamente nei data center situati in
+Svizzera e non trasferire mai le tue informazioni al di fuori di queste infrastrutture», a
+informare tempestivamente in caso di violazione, a dichiarare i propri subappaltatori, e a separare
+i dati dei clienti con isolamento fisico o logico verificato da test di penetrazione annuali.
+
+Le certificazioni, verificate sulla loro pagina l'11 settembre 2026:
+
+| Norma o label | Che cosa copre | Dal |
+|---|---|---|
+| **ISO 27001:2022** | gestione della sicurezza delle informazioni | giugno 2018 |
+| **ISO 9001:2015** | gestione della qualità | luglio 2022 |
+| **ISO 14001:2015** | gestione ambientale | aprile 2015 |
+| **ISO 50001:2018** | efficienza e gestione dell'energia | aprile 2015 |
+| **Swiss Hosting** | dati ubicati ed elaborati in data center in Svizzera, progettati e gestiti da loro | — |
+| **Swiss Made** / **Swiss Made Software** | sede e sviluppo in Svizzera, nessuna delocalizzazione, assistenza compresa | — |
+| **B Corp™** | standard di impatto sociale e ambientale, governance, trasparenza | 2025 |
+
+Che cosa questo **non** significa, perché la distinzione è la stessa che vale per l'app stessa:
+Infomaniak risponde dell'**infrastruttura**, non di come io tratto i tuoi dati. Nel linguaggio
+della legge è un responsabile del trattamento, e il titolare resto io. Le loro certificazioni
+dicono che la casella è tenuta bene e sta in Svizzera; quello che faccio con le tue email lo dice
+questo documento, e ne rispondo io.
+
+Un effetto pratico che vale la pena conoscere se lavori in uno studio o in un ente: essendo
+un'azienda svizzera senza presenza negli Stati Uniti, Infomaniak non ricade sotto il CLOUD Act
+statunitense, che è invece la ragione per cui molti servizi di posta diffusi vengono guardati con
+diffidenza quando si tratta di dati coperti da segreto professionale.
 
 ## 3. I tre casi in cui ricevo qualcosa da te
 
@@ -67,10 +97,12 @@ non carica caratteri né immagini da servizi esterni: l'ho verificato sul codice
 puoi verificarlo tu. GitHub registra gli accessi ai propri server per proprie ragioni tecniche, e
 su quello non ho voce; vale la loro informativa.
 
-## 5. Per quanto tengo le cose, e a chi non le do
+## 5. Per quanto tengo le cose, dove stanno, e a chi non le do
 
 Tengo le email e i Rapporti finché servono al lavoro per cui me li hai mandati, e comunque non
-oltre due anni. Stanno sulla mia casella e sul mio computer, con disco cifrato.
+oltre due anni. Stanno in **due posti soli**: la casella Infomaniak in Svizzera descritta al
+punto 2, e il mio computer, con disco cifrato e blocco automatico dello schermo — le stesse
+abitudini che l'app raccomanda a te.
 
 **Non li do a nessuno**: nessun servizio di statistiche, nessuna piattaforma pubblicitaria,
 nessun fornitore di intelligenza artificiale, nessun terzo. Non faccio profilazione e non prendo

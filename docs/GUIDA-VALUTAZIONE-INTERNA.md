@@ -59,6 +59,19 @@ righe, insieme ai conteggi, a rendere utile la prova. Inviate a giacomo@insegnai
 `[anonimai valutazione]`. Nessun documento, mai, nemmeno in parte: se vi scappa un allegato
 sbagliato, avete comunicato un atto a un terzo.
 
+**Dove arriva quello che mandate.** La casella è ospitata da **Infomaniak** (Ginevra): posta e
+allegati restano su data center **in Svizzera**, certificati **ISO 27001** dal 2018, con l'impegno
+contrattuale a non trasferirli fuori da quelle infrastrutture. Essendo un'azienda svizzera senza
+presenza negli Stati Uniti, Infomaniak non ricade sotto il CLOUD Act statunitense — la ragione per
+cui molti servizi di posta diffusi non vanno bene per chi è tenuto al segreto professionale.
+Questo riguarda l'infrastruttura; che cosa faccio dei vostri Rapporti, per quanto li tengo e come
+farli cancellare è scritto in [PRIVACY.md](../PRIVACY.md).
+
+E la cosa più importante: **mandarli non è obbligatorio**. Nessuna funzione dell'app dipende da
+quell'invio e potete usarla per sempre senza scrivermi. Serve a capire che cosa il programma
+sbaglia sui documenti veri di uno studio ticinese, che oggi nessuno sa — e a correggerlo per tutti
+quelli che verranno dopo di voi.
+
 ## A che cosa serve il Rapporto, oltre a questo
 
 **A voi, subito.** È il **verbale del trattamento** per l'incarto: data, impronta del documento

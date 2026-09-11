@@ -80,4 +80,9 @@ misura onesta possibile senza che un solo atto esca da uno studio. Come farlo, p
    [RAPPORTO-CONFORMITA-SETTORI.md](RAPPORTO-CONFORMITA-SETTORI.md); la mappa articolo per
    articolo in [CONFORMITA-CH.md](CONFORMITA-CH.md).
 
+L'invio non è obbligatorio: nessuna funzione dell'app ne dipende, e potete usarla per sempre
+senza scrivermi. Se lo fate, la casella è ospitata da **Infomaniak** (Ginevra) e quello che mandate
+resta su data center in Svizzera, certificati ISO 27001; che cosa ne faccio è scritto in
+[PRIVACY.md](../PRIVACY.md).
+
 Contatto: giacomo@insegnai.ch · Repository: https://github.com/gmesc/anonimai

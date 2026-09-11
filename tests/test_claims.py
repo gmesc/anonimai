@@ -17,7 +17,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 
 TESTI = ["src/app/app.py", "README.md", "docs/index.html", "tauri/ui/index.html",
-         "TERMS.md", "SECURITY.md", "docs/CONFORMITA-CH.md", "docs/guida/index.html"]
+         "TERMS.md", "SECURITY.md", "PRIVACY.md", "NOTICE.md",
+         "docs/CONFORMITA-CH.md", "docs/RAPPORTO-CONFORMITA-SETTORI.md",
+         "docs/PRESENTAZIONE-STUDI.md", "docs/GUIDA-VALUTAZIONE-INTERNA.md",
+         "docs/guida/index.html"]
 
 # (etichetta, regex). Cercano l'AFFERMAZIONE, non la parola.
 VIETATI = [
@@ -73,6 +76,32 @@ NEGAZIONI = re.compile(
     r"n[eè]|nor|escluso|salvo)\b[^.;:!?]{0,60}$", re.IGNORECASE)
 
 
+# Una certificazione ATTRIBUITA A UN TERZO nominato e' un fatto verificabile, non un
+# claim sul nostro software: «i data center di Infomaniak sono certificati ISO 27001»
+# si controlla sul registro dell'ente che l'ha rilasciata. Il divieto resta intero su
+# noi stessi — «AnonimAI e' certificato» non passa, perche' li' non c'e' nessuna norma
+# accanto. Serve un riferimento normativo esplicito (ISO/IEC/EN + numero) nella stessa
+# frase: senza quello, la parola «certificato» resta sospetta.
+NORMA_DI_TERZI = re.compile(r"\b(?:ISO|IEC|EN)[\s/-]?\d{4,5}\b", re.IGNORECASE)
+# ...e l'eccezione non vale se nella stessa frase c'e' il NOSTRO nome: «AnonimAI e'
+# certificato ISO 27001» passava, ed e' esattamente la frase che il lint esiste per
+# fermare. La norma accanto non basta: deve essere la certificazione di un ALTRO.
+NOI = re.compile(r"\b(?:anonimai|rizzo[- ]?pii)\b", re.IGNORECASE)
+# In italiano «certificato» e' anche un TIPO DI DOCUMENTO — il certificato medico, quello
+# di malattia, quello di lavoro — e nel rapporto per settori compare negli elenchi di
+# carte che uno studio maneggia («referti, lettere di dimissione, certificati»). Non ha
+# niente a che vedere con una certificazione di conformita': si distingue dal lessico
+# che gli sta intorno.
+CERTIFICATO_DOCUMENTO = re.compile(
+    r"\b(?:refert\w+|medic\w+|malattia|dimission\w+|consulenz\w+|assicurazion\w+|"
+    r"paziente|diagnosi|rilasci\w+|anagraf\w+)\b", re.IGNORECASE)
+# Limite noto e accettato: una frase che nomina il fornitore certificato E il nostro
+# prodotto nello stesso periodo viene bloccata anche quando il nostro nome compare per
+# NEGARE («Infomaniak e' certificata ISO 27001; AnonimAI non certifica nulla»). Il lint
+# sbaglia chiedendo di spezzare la frase in due, non lasciando passare un claim: e'
+# l'errore dalla parte giusta.
+
+
 def trova_claim(testo, origine=""):
     """I claim non sostenibili dentro un testo. Lavora su una STRINGA e non su un
     file apposta: cosi' la batteria di frasi qui sotto si prova senza toccare i
@@ -83,6 +112,13 @@ def trova_claim(testo, origine=""):
             prima = testo[max(0, m.start() - 90):m.start()]
             if NEGAZIONI.search(prima):
                 continue                              # «non certifica», «senza garanzia»
+            intorno = testo[max(0, m.start() - 120):m.end() + 120]
+            if (etichetta == "certificazione" and NORMA_DI_TERZI.search(intorno)
+                    and not NOI.search(intorno)):
+                continue                              # «certificati ISO 27001»: fatto su un terzo
+            if (etichetta == "certificazione" and not NORMA_DI_TERZI.search(intorno)
+                    and CERTIFICATO_DOCUMENTO.search(intorno) and not NOI.search(intorno)):
+                continue                              # «referti e certificati»: e' una carta
             riga = testo[:m.start()].count("\n") + 1
             fuori.append(f"{origine}:{riga}: {etichetta} -> "
                          f"{testo[m.start():m.end() + 40]!r}")
@@ -107,6 +143,13 @@ CLAIM_FALSI = [
     "Con AnonimAI sei in regola con la nLPD.", "Rende il trattamento conforme.",
     "I tuoi documenti sono perfettamente protetti.", "Niente puo' mai sfuggire.",
     "Rischio zero per i tuoi dati.", "Assicura che tutti i nomi siano nascosti.",
+    # senza una norma accanto resta un claim su di noi, e deve cadere
+    "AnonimAI e' un software certificato per il trattamento di dati sensibili.",
+    # la norma accanto non salva un claim su NOI STESSI
+    "AnonimAI e' certificato ISO 27001.",
+    "rizzo-pii e' un software certificato ISO 9001:2015.",
+    # ne' il lessico clinico puo' fare da scudo a un claim su di noi
+    "AnonimAI e' certificato per i dati medici dei pazienti.",
 ]
 
 # Il rovescio: dire i limiti deve restare possibile, o il lint spinge a tacere.
@@ -119,6 +162,12 @@ FRASI_LECITE = [
     "Designed for GDPR and nLPD, but you remain the data controller.",
     "Detection is statistical and can miss values.",
     "Il software non certifica la conformita' di alcun trattamento.",
+    # fatto su un TERZO nominato, con la norma accanto: verificabile, quindi lecito
+    "La casella e' ospitata da Infomaniak: data center in Svizzera certificati ISO 27001.",
+    "Infomaniak e' certificata ISO 9001:2015 dal luglio 2022.",
+    # «certificato» come tipo di documento, non come conformita'
+    "Referti, lettere di dimissione, corrispondenza con le assicurazioni, certificati.",
+    "Il medico rilascia certificati per il paziente.",
 ]
 
 

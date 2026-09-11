@@ -5,6 +5,42 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-11 — dove arriva la posta: Infomaniak, dichiarato dove serve decidere
+
+L'informativa diceva «tengo le email sulla mia casella» senza dire quale. Per uno studio che deve
+decidere se mandare un Rapporto, quel dettaglio e' la decisione: la posta e' la sola parte del
+progetto in cui qualcosa di suo lascia il suo computer.
+
+- **`PRIVACY.md` §2** ora dice che la casella e' ospitata da **Infomaniak** (Ginevra) e riporta le
+  certificazioni **verificate sulla loro pagina l'11 settembre 2026**: ISO 27001:2022 dal giugno
+  2018, ISO 9001:2015 da luglio 2022, ISO 14001:2015 e ISO 50001:2018 dall'aprile 2015, i label
+  Swiss Hosting e Swiss Made, B Corp dal 2025. Piu' gli impegni contrattuali citati testualmente
+  dalla loro documentazione: dati «esclusivamente nei data center situati in Svizzera», nessun
+  trasferimento fuori, avviso in caso di violazione, subappaltatori dichiarati, isolamento fra
+  clienti con test di penetrazione annuali.
+- **Detto anche cio' che quelle certificazioni NON coprono**, perche' e' la stessa distinzione che
+  il progetto fa ovunque: Infomaniak risponde dell'infrastruttura ed e' un responsabile del
+  trattamento; il titolare resta l'autore, e di come tratta le email risponde lui.
+- Aggiunto il punto pratico che interessa chi e' tenuto al segreto: azienda svizzera senza presenza
+  negli Stati Uniti, quindi fuori dal CLOUD Act.
+- La stessa informazione, in breve, **dove si prende la decisione**: `SECURITY.md` (prima di
+  segnalare un difetto), `docs/GUIDA-VALUTAZIONE-INTERNA.md` e `docs/PRESENTAZIONE-STUDI.md` (prima
+  di mandare un Rapporto), sempre ripetendo che **l'invio non e' obbligatorio**.
+- ⚠️ **Il lint anti-claim ha bloccato la parola «certificati», e aveva ragione a chiedere.** Ora
+  distingue tre casi: una certificazione **attribuita a un terzo nominato con la norma accanto**
+  («i data center di Infomaniak sono certificati ISO 27001») e' un fatto verificabile e passa;
+  «certificato» come **tipo di documento** («referti, dimissioni, certificati» nel rapporto per
+  settori) non c'entra nulla e passa; ma **nessuna delle due eccezioni vale se nella frase compare
+  il nostro nome** — «AnonimAI e' certificato ISO 27001» e «AnonimAI e' certificato per i dati
+  medici dei pazienti» cadono entrambe, ed entrambe sono nella batteria di controllo. Trovate
+  scrivendo, e chiuse una alla volta: la prima versione dell'eccezione lasciava passare il claim
+  su noi stessi, la seconda si faceva scudo del lessico clinico.
+- Il lint ora guarda anche `PRIVACY.md`, `NOTICE.md`, il rapporto per settori, la presentazione e
+  la guida: erano i documenti nuovi, e nessuno li controllava. **137 test verdi.**
+- Limite noto e accettato, scritto nel test: una frase che nomina il fornitore certificato **e** il
+  nostro prodotto nello stesso periodo viene bloccata anche quando il nostro nome serve a negare.
+  Il lint sbaglia chiedendo di spezzare la frase, non lasciando passare un claim.
+
 ## 2026-09-11 — chi ha scritto che cosa: licenza a tre parti, avviso di modifica, informativa
 
 Analisi di tutto cio' che raggiunge chi scarica, prima di distribuire il fork. Le licenze a monte
