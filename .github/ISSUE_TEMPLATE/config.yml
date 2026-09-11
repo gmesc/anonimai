@@ -1,0 +1,26 @@
+# Niente issue vuote: i tre moduli coprono i casi veri, e ognuno chiede
+# la cosa che serve per riprodurre. Chi ha davvero un caso fuori elenco
+# scrive, ma passando da uno dei canali qui sotto.
+blank_issues_enabled: false
+
+contact_links:
+  - name: 🔒 Un difetto che lascia dati personali in chiaro
+    url: https://github.com/gmesc/anonimai/security/advisories/new
+    about: >-
+      NON aprire una issue pubblica. Un difetto che lascia valori leggibili
+      nell'output, che fa uscire dati dalla macchina o che espone il server
+      a insaputa dell'utente si segnala in privato — da qui, oppure a
+      giacomo@insegnai.ch. Tempi e perimetro sono in SECURITY.md.
+
+  - name: 💬 Una domanda su come si usa, o su che cosa copre
+    url: https://github.com/gmesc/anonimai/discussions
+    about: >-
+      Prima però guarda la guida illustrata in docs/guida/ e il quadro per
+      settori in docs/RAPPORTO-CONFORMITA-SETTORI.md: dicono che cosa il
+      programma copre e, soprattutto, che cosa non copre.
+
+  - name: 📋 Ho provato l'app sui miei documenti e voglio mandare i Rapporti
+    url: https://github.com/gmesc/anonimai/blob/main/docs/GUIDA-VALUTAZIONE-INTERNA.md
+    about: >-
+      Non passa da qui: i Rapporti si mandano per email (non è obbligatorio).
+      La guida spiega che cosa controllare nel file prima di inviarlo.

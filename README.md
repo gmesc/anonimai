@@ -604,6 +604,7 @@ rizzo_pii/
 ├─ PRIVACY.md                what reaches the author (the app itself collects nothing)
 ├─ THIRD_PARTY_LICENSES.md   what ships inside the binaries, and under which licence
 ├─ CONTRIBUTING.md           how to contribute (code, docs, data)
+├─ CODE_OF_CONDUCT.md        how we behave here — starting with: never post real personal data
 ├─ requirements.txt          Python dependencies (see the cu128 note for Blackwell GPUs)
 ├─ Dockerfile                the web app in a container (CPU deps + model baked in)
 ├─ Dockerfile.linux          reproducible build env for the Linux .deb/AppImage bundles

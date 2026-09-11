@@ -5,6 +5,35 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-11 — codice di condotta e moduli per le issue: la regola dei dati veri, al momento giusto
+
+Il repository chiedeva gia' di non pubblicare dati personali — in `SECURITY.md` e in
+`CONTRIBUTING.md` — ma lo chiedeva a chi era andato a cercarlo. Chi apre una issue arriva da
+un'altra parte, e arriva con il caso in mano.
+
+- **`CODE_OF_CONDUCT.md`**, bilingue. Non apre con le buone maniere ma con la regola che qui viene
+  prima: **mai pubblicare dati personali veri**, nemmeno i propri, nemmeno in uno screenshot, e
+  come inventare un valore della stessa forma per mostrare un difetto. Poi che cosa fare se
+  succede lo stesso (scrivere subito: si cancella prima e si discute dopo), come ci si tratta, e
+  una riga che un progetto come questo deve avere: **non si aiuta nessuno ad aggirare la
+  protezione dei dati di qualcun altro**. Ispirato al Contributor Covenant 2.1 e riscritto, perche'
+  il testo standard non dice la sola cosa che qui conta davvero.
+- **Moduli per le issue** (`.github/ISSUE_TEMPLATE/`), tre piu' la configurazione: *valore non
+  riconosciuto* (la segnalazione piu' utile che il progetto possa ricevere), *qualcosa non
+  funziona*, *una proposta*. Ognuno si apre con l'avvertenza e **non si invia** senza la spunta
+  con cui chi scrive dichiara che quello che ha scritto e' inventato. Le issue vuote sono spente,
+  altrimenti il modulo si salta con un clic; e `config.yml` manda le **vulnerabilita'** al canale
+  privato, le domande alle discussioni, i Rapporti alla loro guida.
+- Il modulo del rilevamento chiede anche il **tipo di documento** e come e' stato dato in pasto
+  all'app: senza quelli una segnalazione non si riproduce. E ricorda i due gesti che risolvono
+  subito meta' dei casi — i Termini personali per coprire sempre, il occhio per lasciare in chiaro.
+- **`tests/test_issue_template.py`** (5 prove): un modulo YAML malformato GitHub **non lo segnala**,
+  lo ignora e mostra la casella vuota — il difetto si scopre quando qualcuno ha gia' aperto la
+  issue sbagliata. Il test controlla la forma, che le issue vuote restino spente, che esista il
+  canale privato per le falle, e soprattutto che **ogni modulo conservi la spunta obbligatoria sui
+  dati veri**: e' la riga che sparisce per prima in un ritocco frettoloso. Verificato che il test
+  non sia decorativo togliendo la spunta da un modulo: diventa rosso.
+
 ## 2026-09-11 — dove arriva la posta: Infomaniak, dichiarato dove serve decidere
 
 L'informativa diceva «tengo le email sulla mia casella» senza dire quale. Per uno studio che deve

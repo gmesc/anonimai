@@ -2,6 +2,12 @@
 
 Thanks for helping build a privacy tool for Italy. 🦔🇮🇹
 
+**Before anything else: never post real personal data** — not in an issue, a pull request, a
+comment, a screenshot or a test file. Invent a value with the same shape instead. That rule, and
+how we treat each other, is in [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md); by taking part you agree
+to it. Opening an issue walks you through it: the forms ask for a made-up example and will not
+submit without the declaration.
+
 The single biggest lever on quality is **data** — a large, real, lawfully-collected Italian
 corpus, especially for **organizations (`ORG`)** and the legal identifiers that are scarce today.
 Contributions of code, documentation and (above all) data are all welcome.

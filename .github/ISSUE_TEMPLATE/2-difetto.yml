@@ -1,0 +1,96 @@
+name: "🐛 Qualcosa non funziona"
+description: "L'app non parte, si blocca, un bottone non fa quello che dice, il PDF esce sbagliato"
+title: "[difetto] "
+labels: ["difetto"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ### ⚠️ Due cose prima di scrivere
+
+        **Non incollare dati personali veri**, nemmeno tuoi, nemmeno in uno screenshot: una issue
+        è pubblica per sempre. Copri quello che serve, o usa un documento inventato.
+
+        **Se il difetto lascia dati in chiaro** — valori leggibili nel PDF che l'app dice di aver
+        redatto, dati che escono dalla macchina, server esposto a tua insaputa — **non aprire una
+        issue**: è una vulnerabilità e si segnala in privato, come descritto in
+        [SECURITY.md](https://github.com/gmesc/anonimai/blob/main/SECURITY.md).
+
+  - type: checkboxes
+    id: niente-dati-veri
+    attributes:
+      label: Dati personali
+      options:
+        - label: "Confermo che in questa issue, allegati e schermate compresi, non c'è alcun dato personale vero."
+          required: true
+        - label: "Ho verificato che non si tratti di un difetto che lascia dati in chiaro (quello va segnalato in privato)."
+          required: true
+
+  - type: textarea
+    id: cosa
+    attributes:
+      label: Che cosa è successo
+      description: "In una o due frasi, come lo racconteresti a voce."
+    validations:
+      required: true
+
+  - type: textarea
+    id: passi
+    attributes:
+      label: Come farlo succedere di nuovo
+      placeholder: |
+        1. Apro l'app
+        2. Trascino un PDF di due pagine
+        3. Premo Anonimizza, poi PDF anonimo
+        4. Il file scaricato ha la seconda pagina vuota
+    validations:
+      required: true
+
+  - type: textarea
+    id: atteso
+    attributes:
+      label: Che cosa ti aspettavi invece
+
+  - type: dropdown
+    id: sistema
+    attributes:
+      label: Sistema
+      options:
+        - "macOS (Apple Silicon)"
+        - "macOS (Intel)"
+        - "Windows"
+        - "Linux"
+        - "Docker"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: come-gira
+    attributes:
+      label: Come la fai girare
+      options:
+        - "App installata (installer o .dmg)"
+        - "Dal sorgente (python src/app/app.py)"
+        - "Docker"
+        - "Non lo so"
+    validations:
+      required: true
+
+  - type: input
+    id: versione
+    attributes:
+      label: Versione dell'app
+      description: "In ⚙️ Impostazioni → Server, oppure nel Rapporto (📋)."
+      placeholder: "2.0.0"
+    validations:
+      required: true
+
+  - type: textarea
+    id: log
+    attributes:
+      label: Messaggi d'errore, se ce ne sono
+      description: >-
+        Se l'app è morta all'avvio, il registro è in `backend.log` nella cartella di
+        configurazione (⚙️ → Server ne mostra il percorso). **Rileggilo prima di incollarlo**:
+        può contenere il nome dei file che hai aperto.
+      render: text

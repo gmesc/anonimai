@@ -1,0 +1,71 @@
+name: "💡 Una proposta"
+description: "Una funzione che manca, un testo poco chiaro, un formato svizzero da aggiungere"
+title: "[proposta] "
+labels: ["proposta"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Le proposte più utili nascono da un lavoro vero: «mi serve questo perché ogni settimana
+        devo fare quest'altro». Raccontalo — senza dati personali veri, come sempre.
+
+        Prima però vale la pena guardare due cose, che rispondono già a parecchie domande:
+        il [quadro per settori](https://github.com/gmesc/anonimai/blob/main/docs/RAPPORTO-CONFORMITA-SETTORI.md),
+        che dice anche **che cosa il programma non copre e perché**, e il
+        [registro delle modifiche](https://github.com/gmesc/anonimai/blob/main/docs/CHANGELOG.md),
+        dove le cose scartate sono elencate con il motivo.
+
+  - type: checkboxes
+    id: niente-dati-veri
+    attributes:
+      label: Dati personali
+      options:
+        - label: "Confermo che non c'è alcun dato personale vero in questa proposta."
+          required: true
+
+  - type: textarea
+    id: problema
+    attributes:
+      label: Il problema, prima della soluzione
+      description: "Che cosa stavi facendo, e dove ti sei bloccato."
+      placeholder: >-
+        Ogni mese preparo una trentina di lettere alle famiglie e devo rifare l'anonimizzazione
+        una alla volta, perché l'app lavora su un documento per volta.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposta
+    attributes:
+      label: Come lo risolveresti
+      description: "Anche a grandi linee. Se hai in mente due modi, dilli entrambi."
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Che cosa tocca
+      options:
+        - "Riconoscimento (un formato che manca)"
+        - "Interfaccia"
+        - "PDF (redazione, OCR, riquadri)"
+        - "Documentazione o testi dell'app"
+        - "Protezione dei dati / conformità"
+        - "Altro"
+    validations:
+      required: true
+
+  - type: input
+    id: mestiere
+    attributes:
+      label: In che contesto lavori
+      description: >-
+        Facoltativo, ma cambia le priorità: uno studio notarile e una segreteria scolastica
+        hanno bisogni diversi, e il progetto non si rivolge a tutti allo stesso modo.
+      placeholder: "studio notarile · fiduciaria · lavoratore indipendente · uso personale"
+
+  - type: markdown
+    attributes:
+      value: |
+        Una cosa detta con franchezza: questo progetto lo mantiene una persona sola, nel tempo che
+        avanza. Una proposta può restare ferma a lungo o essere rifiutata — in quel caso ti dico
+        il perché, e finisce nel registro delle modifiche insieme alle altre cose scartate.

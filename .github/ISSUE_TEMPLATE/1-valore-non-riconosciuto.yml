@@ -1,0 +1,95 @@
+name: "🏷️ Un valore non riconosciuto, o riconosciuto male"
+description: "Un dato personale è rimasto in chiaro, ha preso l'etichetta sbagliata, o è stato coperto per errore"
+title: "[rilevamento] "
+labels: ["rilevamento"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Grazie: è la segnalazione più utile che questo progetto possa ricevere.
+
+        ### ⚠️ Prima di scrivere, la regola che qui viene prima di tutte
+        **Non incollare il valore vero.** Inventane uno con la *stessa forma*:
+        `756.1234.5678.97` al posto di un numero AVS vero, `Maria Bernasconi` al posto di un
+        nome vero, `CHE-105.805.649` al posto dell'identificativo di una ditta reale.
+        Una issue è pubblica e indicizzabile per sempre, e questo è un progetto che serve a
+        proteggere i dati delle persone.
+
+        Se il difetto si vede **solo** su un documento che non puoi inventare, non aprire una
+        issue: scrivi a **giacomo@insegnai.ch**.
+
+  - type: checkboxes
+    id: niente-dati-veri
+    attributes:
+      label: Dati personali
+      options:
+        - label: "Confermo che tutto ciò che scrivo qui sotto è **inventato**: nessun valore reale, nessuno screenshot con dati veri."
+          required: true
+
+  - type: dropdown
+    id: tipo
+    attributes:
+      label: Che cosa è successo
+      options:
+        - "È rimasto in chiaro (l'app non l'ha visto)"
+        - "Ha preso l'etichetta sbagliata (coperto, ma come tipo errato)"
+        - "È stato coperto per errore (una parola comune presa per un dato)"
+        - "È stato coperto solo in parte (spezzato a metà)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: esempio
+    attributes:
+      label: La frase, con valori inventati
+      description: "Come l'hai scritta nell'app. Bastano poche parole di contesto attorno."
+      placeholder: "Il paziente, n. AVS 756.1234.5678.97, domiciliato a Locarno."
+      render: text
+    validations:
+      required: true
+
+  - type: textarea
+    id: atteso
+    attributes:
+      label: Che cosa ti aspettavi, e che cosa hai ottenuto
+      placeholder: |
+        Mi aspettavo: 756.1234.5678.97 coperto come ID_DOC
+        Ho ottenuto:  rimasto in chiaro
+    validations:
+      required: true
+
+  - type: input
+    id: tipo-documento
+    attributes:
+      label: Che tipo di documento era
+      description: "Serve a capire dove il problema pesa. Senza nomi, ovviamente."
+      placeholder: "rogito · referto · lettera alle famiglie · fattura · contratto di locazione"
+
+  - type: dropdown
+    id: come
+    attributes:
+      label: Come l'hai dato in pasto all'app
+      options:
+        - "Testo incollato"
+        - "PDF con testo"
+        - "PDF scansionato (OCR)"
+        - "File .md o .txt"
+    validations:
+      required: true
+
+  - type: input
+    id: versione
+    attributes:
+      label: Versione dell'app e del modello
+      description: "Le trovi in ⚙️ Impostazioni → Server, oppure nel Rapporto (📋)."
+      placeholder: "app 2.0.0 · modello rizzo-pii-0.3B v1.5.0"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        💡 Se il valore è **ricorrente nel tuo lavoro** (una sigla interna, il nome di una sede),
+        nel frattempo puoi coprirlo subito con i **Termini personali**: 🏷️ → 📌. E se invece
+        l'app copre qualcosa che *non* è un dato personale — il nome di una scala clinica, per
+        esempio — c'è il gesto opposto, il 👁️ sulle righe del dizionario.
