@@ -1,6 +1,11 @@
 MIT License
 
 Copyright (c) 2026 Simone Rizzo — Rizzo AI Academy
+    (opera originale: rizzo-pii, https://github.com/Rizzo-AI-Academy/rizzo-pii)
+
+Copyright (c) 2026 Giacomo Meschini
+    (fork AnonimAI: profilo Svizzera/Ticino, redazione dei PDF, misure di
+     protezione dei dati e documentazione — vedi NOTICE.md)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,3 +24,48 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+--------------------------------------------------------------------------
+
+Non tutto in questo repository sta sotto la sola MIT. Le tre parti, e perché.
+
+1. IL CODICE SORGENTE — MIT (la licenza qui sopra).
+   Vale per tutto ciò che sta in src/, tests/, scripts/, tauri/, electron/ e per
+   i file di progetto in radice. Prendi src/ da solo e puoi farne quello che
+   vuoi, anche venderlo.
+
+2. I BINARI PUBBLICATI (.exe, .dmg, .AppImage, .deb) — AGPL-3.0.
+   Non per scelta ma per composizione: incorporano PyMuPDF, che è AGPL-3.0 o
+   licenza commerciale Artifex, e un eseguibile che incorpora una libreria AGPL
+   è un'opera combinata la cui licenza segue il componente più stretto. È
+   spiegato per esteso in THIRD_PARTY_LICENSES.md.
+
+3. I DOCUMENTI DI ANALISI nati in questo fork — CC BY-SA 4.0
+   (https://creativecommons.org/licenses/by-sa/4.0/deed.it):
+
+       docs/CONFORMITA-CH.md
+       docs/RAPPORTO-CONFORMITA-SETTORI.md
+       docs/MODELLI-DOCUMENTAZIONE.md
+       docs/PRESENTAZIONE-STUDI.md
+       docs/GUIDA-VALUTAZIONE-INTERNA.md
+       docs/VERIFICA-OFFLINE.md
+
+   Sono testi, non codice: riusali, traducili, adattali al tuo cantone o al tuo
+   settore, cita la fonte e lascia il risultato sotto la stessa licenza. È la
+   stessa licenza delle icone OpenMoji che l'interfaccia già usa.
+   Gli altri documenti — TERMS.md, PRIVACY.md, SECURITY.md, CONTRIBUTING.md,
+   GUIDA-ARCHITETTO.md e la documentazione tecnica di upstream in docs/ — restano
+   MIT: sono testi che chi fa un fork deve poter riscrivere senza vincoli.
+
+--------------------------------------------------------------------------
+
+Licenze del materiale a monte, verificate alla fonte (11 settembre 2026):
+
+  rizzo-pii (codice)                               MIT
+  rizzoaiacademy/rizzo-pii-0.3B (pesi del modello) MIT
+  jhu-clsp/mmBERT-base (modello di partenza)       MIT
+  rizzoaiacademy/anonimizzazione-testi-italiano    MIT
+  OpenMoji (icone dell'interfaccia)                CC BY-SA 4.0
+
+L'elenco completo di ciò che finisce dentro i binari, libreria per libreria, è
+in THIRD_PARTY_LICENSES.md.

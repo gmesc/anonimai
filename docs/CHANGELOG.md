@@ -5,6 +5,47 @@ Le voci più recenti in alto. (Codice: `src/training/train_pii.py` salvo diverso
 
 ---
 
+## 2026-09-11 — chi ha scritto che cosa: licenza a tre parti, avviso di modifica, informativa
+
+Analisi di tutto cio' che raggiunge chi scarica, prima di distribuire il fork. Le licenze a monte
+sono **tutte MIT**, verificate alla fonte: il codice di rizzo-pii, i pesi `rizzo-pii-0.3B`, il
+modello di partenza `mmBERT-base` e il dataset su Hugging Face. L'unico copyleft e' PyMuPDF nei
+binari, gia' documentato. Mancava invece tutto il resto.
+
+- **`LICENSE`: il fork non era attribuito a nessuno.** Diceva solo «Copyright (c) 2026 Simone
+  Rizzo». Ora porta i due copyright e dichiara le **tre parti**: il codice MIT, i binari AGPL-3.0
+  (per composizione, non per scelta: incorporano PyMuPDF), e i **documenti di analisi nati in
+  questo fork** sotto **CC BY-SA 4.0** — sono prosa, non codice, e vanno riusabili citando la
+  fonte. Restano MIT i documenti che un fork deve poter riscrivere: condizioni, informativa,
+  sicurezza, contributi, guida dell'architetto.
+- **`NOTICE.md`, l'avviso di modifica.** L'AGPL-3.0 §5(a) chiede che una versione modificata porti
+  un avviso ben visibile con la data; i binari sono AGPL, quindi la richiesta si applica. Il file
+  dice che cosa viene da rizzo-pii (il motore: modello, tassonomia, addestramento, la prima forma
+  dell'app) e che cosa e' stato aggiunto qui, e chiude con la riga che conta: **i pesi non sono
+  stati riaddestrati**, quindi il numero di qualita' resta quello di upstream sull'italiano.
+  L'avviso e' anche **dentro l'app**, nella scheda Crediti, dove prima si leggeva «costruito su
+  rizzo-pii» — vero ma insufficiente: non diceva «modificato» ne' quando.
+- **`PRIVACY.md`.** L'app non raccoglie niente e lo dimostra; l'informativa serve per i **tre casi**
+  in cui qualcuno scrive all'autore: il Rapporto di valutazione, la segnalazione di sicurezza, la
+  issue pubblica. Sul primo e' scritto a chiare lettere che **non e' obbligatorio** e che nessuna
+  funzione ne dipende: serve a capire che cosa il programma sbaglia sui documenti veri senza che un
+  solo documento vero esca dallo studio. Ripetuto anche qui l'avviso che il Rapporto contiene il
+  **nome del file** caricato.
+- **Via il badge «EU AI ACT ALIGNED»** da README e sito. «Aligned» non significa niente in diritto
+  e suggerisce una valutazione che nessuno ha fatto: e' la stessa famiglia di affermazioni gia'
+  rimossa con «GDPR compliant», e il lint di `test_claims.py` non la intercettava perche' cerca
+  «compliant».
+- ⚠️ **I download puntano a upstream, e ora lo si dice.** I nove link del README e i tre bottoni
+  del sito portano alle release di Rizzo-AI-Academy: questo fork non pubblica ancora binari propri.
+  Chi legge i documenti di conformita' e poi preme «Scarica» installerebbe un'app **senza** profilo
+  svizzero, credenziale, svuotamento della sessione e Termini in chiaro. Finche' non ci sono
+  release proprie, un avviso in testa al blocco di download lo dichiara e manda a clonare il
+  repository.
+- Il test `test_claims` ha pescato l'errore mentre scrivevo: il paragrafo nuovo aveva allontanato
+  lo 0,989 dalla sua attribuzione, che deve stare **accanto** al numero e non da qualche parte nel
+  file. Riscritto: «misurato sul benchmark **italiano** del modello di upstream, non su documenti
+  svizzeri». 137 test verdi.
+
 ## 2026-09-08 — Termini in chiaro: dire che un nome NON e' un dato personale
 
 Nei referti neuropsicologici le scale portano il nome di chi le ha scritte: RAADS-R di Ritvo, Beck,

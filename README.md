@@ -11,7 +11,6 @@
 <p>
 <img src="https://img.shields.io/badge/100%25-LOCAL-7c3aed?style=for-the-badge" alt="100% local" />
 <img src="https://img.shields.io/badge/GDPR%20%2F%20nLPD-BY%20DESIGN-7c3aed?style=for-the-badge" alt="GDPR / nLPD by design" />
-<img src="https://img.shields.io/badge/EU%20AI%20ACT-ALIGNED-7c3aed?style=for-the-badge" alt="EU AI Act aligned" />
 </p>
 
 <p>
@@ -21,6 +20,18 @@
 <img src="https://img.shields.io/badge/micro--F1-0.989%20(IT%20benchmark)-brightgreen" alt="0.989 micro-F1 on the Italian benchmark" />
 <img src="https://img.shields.io/badge/offline-no%20API%20key-brightgreen" alt="offline, no API key" />
 </p>
+
+> **A modified fork.** AnonimAI is built on **rizzo-pii** by **Simone Rizzo** — Rizzo AI Academy
+> (MIT): the model, the taxonomy, the training pipeline and the first shape of the local app come
+> from there — and so does the 0.989 micro-F1, measured on the **Italian benchmark** of the
+> upstream model, not on Swiss documents. This fork, by **Giacomo Meschini**
+> (August–September 2026), adds the **Swiss/Ticino recognition profile**, the **real PDF redaction**
+> (OCR, manual boxes, metadata scrubbing), the **data-protection measures** (no network calls with
+> tests to prove it, nothing on disk, session wipe, credentials for an exposed server) and the
+> **compliance documentation**. What changed, in detail and dated: **[NOTICE.md](NOTICE.md)**.
+> The unmodified original lives at
+> [Rizzo-AI-Academy/rizzo-pii](https://github.com/Rizzo-AI-Academy/rizzo-pii); this fork does not
+> speak for Rizzo AI Academy and is not endorsed by them.
 
 **📄 [Read the full technical report (PDF)](report/rizzo-pii-report.pdf)** — model, dataset, method and experiments in detail
 
@@ -64,6 +75,7 @@ nature of clinical or pedagogical texts make them the wrong first audience.
 > the authors never see your data, **you remain the data controller and the final human review of
 > every output is yours**. Detection is statistical and can miss values. No badge on this page is a
 > compliance certification — see [TERMS.md](TERMS.md), [SECURITY.md](SECURITY.md) and
+> [PRIVACY.md](PRIVACY.md) (what *I* receive from you — the app itself collects nothing),
 > [docs/CONFORMITA-CH.md](docs/CONFORMITA-CH.md) (Swiss nLPD / Ticino LPDP mapping),
 > [docs/RAPPORTO-CONFORMITA-SETTORI.md](docs/RAPPORTO-CONFORMITA-SETTORI.md) (what the app really
 > covers, sector by sector) and [docs/MODELLI-DOCUMENTAZIONE.md](docs/MODELLI-DOCUMENTAZIONE.md)
@@ -326,6 +338,13 @@ The desktop app **AnonimAI** (Tauri) launches the Python/Flask backend as a bund
 "sidecar"; a CPU-only PyTorch build keeps it fully **offline** on Windows (WebView2), macOS and Linux.
 Packaging instructions in **[docs/BUILD.md](docs/BUILD.md)**.
 
+> **⚠️ Which build are you downloading?** The installers linked below are the **upstream**
+> rizzo-pii releases. They do **not** contain what this fork adds: the Swiss/Ticino recognition
+> profile, the session wipe, the credential for an exposed server, the terms left in the clear.
+> This fork does not publish its own binaries yet — to run *this* version, clone the repository and
+> follow [Quickstart](#quickstart), or build it yourself with [docs/BUILD.md](docs/BUILD.md).
+> The compliance documents in `docs/` describe **this** fork, not the upstream build.
+
 > **⬇️ Download.** Verify the `.sha256` published next to each binary before installing:
 > `shasum -a 256 -c <file>.sha256` on macOS/Linux, `Get-FileHash <file>` on Windows
 > (`scripts/checksums.sh` generates and checks them). Grab the ready-to-use build from the
@@ -580,7 +599,9 @@ curl -X POST localhost:5005/analyze -H 'Content-Type: application/json' \
 ```
 rizzo_pii/
 ├─ README.md                 this file
-├─ LICENSE                   MIT
+├─ LICENSE                   MIT (code) · AGPL-3.0 (binaries) · CC BY-SA 4.0 (analysis docs)
+├─ NOTICE.md                 what this fork changed from rizzo-pii, and when
+├─ PRIVACY.md                what reaches the author (the app itself collects nothing)
 ├─ THIRD_PARTY_LICENSES.md   what ships inside the binaries, and under which licence
 ├─ CONTRIBUTING.md           how to contribute (code, docs, data)
 ├─ requirements.txt          Python dependencies (see the cu128 note for Blackwell GPUs)
@@ -734,10 +755,19 @@ Vincoli: SOLO dati sintetici (mai PII reali). Se Gemini non è disponibile, ferm
 
 ## License
 
-Released under the **[MIT License](LICENSE)** © 2026 Simone Rizzo — Rizzo AI Academy.
-The **released binaries** are a different matter: they bundle PyMuPDF and are therefore conveyed
-under the AGPL-3.0 — see [Licensing of the released binaries](#licensing-of-the-released-binaries)
-at the end of this file, and [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+Three parts, three licences — see **[LICENSE](LICENSE)** for the exact wording.
+
+| What | Licence |
+| --- | --- |
+| **Source code** (`src/`, `tests/`, `scripts/`, `tauri/`, `electron/`) | **MIT** © 2026 Simone Rizzo — Rizzo AI Academy, © 2026 Giacomo Meschini |
+| **Released binaries** (`.exe`, `.dmg`, `.AppImage`, `.deb`) | **AGPL-3.0** — not by choice but by composition: they bundle PyMuPDF |
+| **Analysis documents written in this fork** (the Swiss compliance map, the sector report, the templates, the study materials) | **CC BY-SA 4.0** — they are prose, not code: reuse them, translate them, adapt them to your canton, credit the source and keep the result under the same terms |
+
+Everything upstream is MIT, verified at the source: the rizzo-pii code, the
+`rizzo-pii-0.3B` weights, the `mmBERT-base` backbone and the training dataset. The only copyleft
+component is PyMuPDF, and that is why the binaries are AGPL — the full reasoning is in
+[Licensing of the released binaries](#licensing-of-the-released-binaries) at the end of this file
+and in [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 Note on third-party data: the training corpus draws on
 [Ai4Privacy](https://huggingface.co/datasets/ai4privacy/open-pii-masking-500k-ai4privacy)
